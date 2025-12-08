@@ -22,6 +22,7 @@ public class DishVariant {
 
     // Quan hệ: Một size có danh sách công thức riêng
     @OneToMany(mappedBy = "dishVariant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Recipe> recipes = new ArrayList<>();
 
     // ==========================================

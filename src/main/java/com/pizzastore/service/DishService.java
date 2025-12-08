@@ -17,10 +17,11 @@ import java.util.stream.Collectors;
 public class DishService {
 
     private final DishRepository dishRepository;
-
+    private final com.pizzastore.repository.DishVariantRepository dishVariantRepository;
     @Autowired
-    public DishService(DishRepository dishRepository) {
+    public DishService(DishRepository dishRepository, com.pizzastore.repository.DishVariantRepository dishVariantRepository) {
         this.dishRepository = dishRepository;
+        this.dishVariantRepository = dishVariantRepository;
     }
 
     // 1. LẤY MENU
@@ -53,7 +54,14 @@ public class DishService {
         }
         return maxCanCook;
     }
+    // --- 3. THÊM HÀM LẤY CÔNG THỨC THEO VARIANT ID ---
+    public List<Recipe> getRecipeByVariantId(Long variantId) {
+        DishVariant variant = dishVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Size/Biến thể không tồn tại!"));
 
+        // Trả về danh sách công thức của đúng cái Size đó
+        return variant.getRecipes();
+    }
     // 3. CÁC HÀM KHÁC
     public Dish getDishById(Long id) {
         return dishRepository.findById(id).orElseThrow(() -> new RuntimeException("Món không tồn tại"));

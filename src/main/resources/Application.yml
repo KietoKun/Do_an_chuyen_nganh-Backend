@@ -47,3 +47,11 @@ cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
+
+payment:
+  vnpay:
+    url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html" # URL này cố định, không cần ẩn
+    api-url: "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction" # Cố định
+    tmn-code: ${VNPAY_TMN_CODE}       # <--- Chờ biến môi trường
+    hash-secret: ${VNPAY_HASH_SECRET} # <--- Chờ biến môi trường
+    return-url: ${VNPAY_RETURN_URL}   # <--- URL trả về (Local khác, VPS khác)

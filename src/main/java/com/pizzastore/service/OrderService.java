@@ -117,8 +117,8 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại"));
 
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException("Chỉ đơn hàng đang chờ mới được duyệt!");
+        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PAID) {
+            throw new RuntimeException("Đơn hàng này không thể duyệt (đang nấu hoặc đã hủy)!");
         }
 
         // --- LOGIC TRỪ KHO ---

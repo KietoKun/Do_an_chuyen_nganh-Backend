@@ -2,6 +2,7 @@ package com.pizzastore.controller;
 
 import com.pizzastore.dto.MenuResponse; // Import DTO mới
 import com.pizzastore.entity.Dish;
+import com.pizzastore.entity.Recipe;
 import com.pizzastore.service.DishService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +54,17 @@ public class DishController {
     public ResponseEntity<?> deleteDish(@PathVariable Long id) {
         dishService.deleteDish(id);
         return ResponseEntity.ok("Đã xóa món ăn thành công!");
+    }
+
+    @GetMapping("/variants/{variantId}/recipe")
+    @PreAuthorize("hasAnyRole('CHEF', 'MANAGER')") // Chỉ nội bộ được xem
+    public ResponseEntity<?> getRecipeByVariant(@PathVariable Long variantId) {
+        try {
+            List<Recipe> recipes = dishService.getRecipeByVariantId(variantId);
+            return ResponseEntity.ok(recipes);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // --- CÁC HÀM CŨ ĐÃ BỊ LOẠI BỎ (updateDish, getDishRecipe) ---

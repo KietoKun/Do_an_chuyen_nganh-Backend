@@ -64,6 +64,7 @@ public class WebSecurityConfig {
                         auth.requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/dishes/**", "/api/toppings/**").permitAll() // Cho phép xem món
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                                .requestMatchers("/api/payment/**").permitAll()
                                 .anyRequest().authenticated()
                 );
 

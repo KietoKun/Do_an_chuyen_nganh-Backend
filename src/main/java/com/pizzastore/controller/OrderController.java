@@ -78,8 +78,6 @@ public class OrderController {
         try {
             // 1. Lấy username từ Token đang đăng nhập
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-
-            // 2. Gọi Repository tìm đơn của đúng ông này
             java.util.List<Order> orders = orderRepository.findByCustomer_Account_UsernameOrderByOrderTimeDesc(currentUsername);
 
             return ResponseEntity.ok(orders);
