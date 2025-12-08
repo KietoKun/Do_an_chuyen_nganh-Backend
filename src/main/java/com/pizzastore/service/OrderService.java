@@ -73,25 +73,33 @@ public class OrderService {
             detail.setDishVariant(variant);
             detail.setQuantity(item.getQuantity());
 
-            // --- XỬ LÝ TOPPING (MỚI) ---
+            // --- XỬ LÝ TOPPING ---
             double toppingsPrice = 0;
             List<Topping> toppings = new ArrayList<>();
 
             if (item.getToppingIds() != null && !item.getToppingIds().isEmpty()) {
-                // Lấy danh sách Topping từ DB dựa trên ID khách gửi lên
                 toppings = toppingRepository.findAllById(item.getToppingIds());
-
-                // Lưu vào chi tiết đơn hàng
                 detail.setToppings(toppings);
 
-                // Cộng tiền topping
                 for (Topping t : toppings) {
                     toppingsPrice += t.getPrice();
                 }
             }
 
-            // Tính tiền: (Giá món + Giá các topping) * Số lượng
-            double subTotal = (variant.getPrice() + toppingsPrice) * item.getQuantity();
+            // --- TÍNH TOÁN GIÁ SNAPSHOT (QUAN TRỌNG) ---
+
+            // 1. Lấy giá gốc tại thời điểm hiện tại
+            double currentVariantPrice = variant.getPrice();
+
+            // 2. Tính Đơn giá tổng hợp (Giá món + Giá Topping)
+            // Đây là giá của 1 cái bánh kèm topping lúc khách mua
+            double finalUnitPrice = currentVariantPrice + toppingsPrice;
+
+            // 3. Lưu giá này vào DB (Để sau này đối chiếu nếu giá menu thay đổi)
+            detail.setUnitPrice(finalUnitPrice);
+
+            // 4. Tính thành tiền (Số lượng * Đơn giá tổng hợp)
+            double subTotal = finalUnitPrice * item.getQuantity();
             detail.setSubTotal(subTotal);
 
             totalAmount += subTotal;
@@ -113,11 +121,12 @@ public class OrderService {
             throw new RuntimeException("Chỉ đơn hàng đang chờ mới được duyệt!");
         }
 
+        // --- LOGIC TRỪ KHO ---
         for (OrderDetail detail : order.getOrderDetails()) {
             DishVariant variant = detail.getDishVariant();
             int quantityOrdered = detail.getQuantity();
 
-            // A. TRỪ KHO THEO CÔNG THỨC MÓN ĂN (Code cũ)
+            // A. TRỪ KHO THEO CÔNG THỨC MÓN ĂN
             for (Recipe recipe : variant.getRecipes()) {
                 Product product = recipe.getProduct();
                 double totalNeeded = recipe.getQuantityNeeded() * quantityOrdered;
@@ -129,11 +138,10 @@ public class OrderService {
                 productRepository.save(product);
             }
 
-            // B. TRỪ KHO THEO TOPPING (Code mới)
+            // B. TRỪ KHO THEO TOPPING
             if (detail.getToppings() != null) {
                 for (Topping topping : detail.getToppings()) {
                     Product product = topping.getProduct();
-                    // Lượng cần = Định lượng 1 topping * Số lượng bánh
                     double totalNeeded = topping.getQuantityNeeded() * quantityOrdered;
 
                     if (product.getStockQuantity() < totalNeeded) {

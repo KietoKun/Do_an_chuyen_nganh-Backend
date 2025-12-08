@@ -15,6 +15,7 @@ public class OrderDetail {
     @JoinColumn(name = "variant_id") // Đổi tên cột trong DB thành variant_id
     private DishVariant dishVariant;
 
+    private Double unitPrice;
     private Integer quantity;
     private Double subTotal;
 
@@ -59,4 +60,11 @@ public class OrderDetail {
 
     public java.util.List<Topping> getToppings() { return toppings; }
     public void setToppings(java.util.List<Topping> toppings) { this.toppings = toppings; }
+
+    public void setUnitPrice(Double unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+    public Double getUnitPrice() {
+        return unitPrice;
+    }
 }

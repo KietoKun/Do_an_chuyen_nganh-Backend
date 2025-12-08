@@ -12,4 +12,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // Tìm theo trạng thái (Ví dụ: Bếp tìm các đơn đang PENDING)
     // List<Order> findByStatus(OrderStatus status);
+    List<Order> findByCustomer_Account_UsernameOrderByOrderTimeDesc(String username);
 }
