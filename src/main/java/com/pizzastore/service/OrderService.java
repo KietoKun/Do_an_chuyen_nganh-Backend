@@ -40,8 +40,9 @@ public class OrderService {
         this.toppingRepository = toppingRepository;
     }
 
+    // --- SỬA Ở ĐÂY: Đổi String -> Order ---
     @Transactional
-    public String createOrder(String username, OrderRequest request) {
+    public Order createOrder(String username, OrderRequest request) {
         // 1. Tìm Customer
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
@@ -69,6 +70,16 @@ public class OrderService {
                 throw new RuntimeException("Món " + variant.getDish().getName() + " hiện đã ngưng phục vụ!");
             }
 
+            // --- [THÊM MỚI] VALIDATE: CHỈ PIZZA MỚI ĐƯỢC THÊM TOPPING ---
+            boolean hasToppings = item.getToppingIds() != null && !item.getToppingIds().isEmpty();
+            String categoryName = variant.getDish().getCategory().getName(); // Lấy tên danh mục (Pizza, Pasta, Drink...)
+
+            if (hasToppings && !categoryName.equalsIgnoreCase("Pizza")) {
+                throw new RuntimeException("Xin lỗi, bạn chỉ có thể thêm Topping (Đế/Phô mai) cho món Pizza. Món '"
+                        + variant.getDish().getName() + "' không hỗ trợ.");
+            }
+            // -------------------------------------------------------------
+
             OrderDetail detail = new OrderDetail();
             detail.setDishVariant(variant);
             detail.setQuantity(item.getQuantity());
@@ -86,19 +97,18 @@ public class OrderService {
                 }
             }
 
-            // --- TÍNH TOÁN GIÁ SNAPSHOT (QUAN TRỌNG) ---
+            // --- TÍNH TOÁN GIÁ SNAPSHOT ---
 
             // 1. Lấy giá gốc tại thời điểm hiện tại
             double currentVariantPrice = variant.getPrice();
 
             // 2. Tính Đơn giá tổng hợp (Giá món + Giá Topping)
-            // Đây là giá của 1 cái bánh kèm topping lúc khách mua
             double finalUnitPrice = currentVariantPrice + toppingsPrice;
 
-            // 3. Lưu giá này vào DB (Để sau này đối chiếu nếu giá menu thay đổi)
+            // 3. Lưu giá này vào DB
             detail.setUnitPrice(finalUnitPrice);
 
-            // 4. Tính thành tiền (Số lượng * Đơn giá tổng hợp)
+            // 4. Tính thành tiền
             double subTotal = finalUnitPrice * item.getQuantity();
             detail.setSubTotal(subTotal);
 
@@ -107,9 +117,12 @@ public class OrderService {
         }
 
         order.setTotalPrice(totalAmount);
-        orderRepository.save(order);
 
-        return "Đặt hàng thành công! Mã đơn: " + order.getId() + ". Tổng tiền: " + totalAmount;
+        // Lưu và lấy lại đối tượng đã có ID
+        Order savedOrder = orderRepository.save(order);
+
+        // --- SỬA Ở ĐÂY: Trả về đối tượng Order thay vì String ---
+        return savedOrder;
     }
 
     @Transactional

@@ -81,7 +81,10 @@ public class WebSecurityConfig {
 
         // Cho phép tất cả các domain (FE nào cũng gọi được)
         // Khi deploy thật, bạn có thể đổi "*" thành "http://localhost:3000" để an toàn hơn
-        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",  // Cho FE cũ
+                "http://localhost:5173" // Cho FE mới
+        ));
 
         // Cho phép các method HTTP
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

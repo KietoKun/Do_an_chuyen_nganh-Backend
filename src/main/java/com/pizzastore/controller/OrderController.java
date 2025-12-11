@@ -32,8 +32,13 @@ public class OrderController {
             // Lấy username người đang đăng nhập
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-            String result = orderService.createOrder(currentUsername, request);
-            return ResponseEntity.ok(result);
+            // --- SỬA Ở ĐÂY ---
+            // Gọi Service và nhận về đối tượng Order (thay vì String)
+            Order newOrder = orderService.createOrder(currentUsername, request);
+
+            // Trả về đối tượng JSON (Frontend sẽ lấy được id từ đây: response.data.id)
+            return ResponseEntity.ok(newOrder);
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi đặt hàng: " + e.getMessage());
         }
@@ -43,8 +48,7 @@ public class OrderController {
     @GetMapping("/kitchen")
     @PreAuthorize("hasAnyRole('CHEF', 'MANAGER', 'STAFF')")
     public ResponseEntity<?> getKitchenOrders() {
-        // Lấy tất cả đơn có trạng thái PENDING hoặc CONFIRMED
-        // (Bạn cần viết thêm hàm findByStatusIn trong Repository)
+        // Lấy tất cả đơn hàng (Thực tế nên filter PENDING/PAID/COOKING thôi)
         return ResponseEntity.ok(orderRepository.findAll());
     }
 
@@ -78,6 +82,8 @@ public class OrderController {
         try {
             // 1. Lấy username từ Token đang đăng nhập
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+            // Hàm này phải có trong OrderRepository nhé
             java.util.List<Order> orders = orderRepository.findByCustomer_Account_UsernameOrderByOrderTimeDesc(currentUsername);
 
             return ResponseEntity.ok(orders);

@@ -30,18 +30,25 @@ public class PaymentController {
     // API CALLBACK (VNPAY gọi về đây)
     @GetMapping("/vnpay-callback")
     public void paymentCallback(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // 1. Xử lý cập nhật database
         int paymentStatus = paymentService.orderReturn(request);
 
-        String redirectUrl = "";
-        if (paymentStatus == 1) {
-            // Thanh toán thành công -> Chuyển hướng về trang Frontend "Cảm ơn"
-            // Thay đổi link này thành link Frontend của bạn (VD: localhost:3000/success)
-            redirectUrl = "http://localhost:3000/payment-success";
-        } else {
-            // Thất bại
-            redirectUrl = "http://localhost:3000/payment-failed";
-        }
+        // 2. Cấu hình URL Frontend (Sửa port thành 5173)
+        String frontendUrl = "http://localhost:5173";
 
-        response.sendRedirect(redirectUrl);
+        if (paymentStatus == 1) {
+            // --- THANH TOÁN THÀNH CÔNG ---
+
+            // Lấy Order ID từ dữ liệu VNPAY gửi về (để FE biết đơn nào)
+            String orderId = request.getParameter("vnp_OrderInfo");
+
+            // Redirect về trang Success kèm Order ID
+            // URL sẽ là: http://localhost:5173/payment-success?orderId=5
+            response.sendRedirect(frontendUrl + "/payment-success?orderId=" + orderId);
+
+        } else {
+            // --- THẤT BẠI ---
+            response.sendRedirect(frontendUrl + "/payment-failed");
+        }
     }
 }
