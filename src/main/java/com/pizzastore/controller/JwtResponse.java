@@ -4,11 +4,13 @@ class JwtResponse {
     private String token;
     private String username;
     private String role;
+    private String fullname;
 
-    public JwtResponse(String token, String username, String role) {
+    public JwtResponse(String token, String username, String role, String fullname) {
         this.token = token;
         this.username = username;
         this.role = role;
+        this.fullname = fullname;
     }
 
     // Getter & Setter
@@ -20,4 +22,7 @@ class JwtResponse {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getFullname() { return fullname; }
+    public void setFullname(String fullname) { this.fullname = fullname; }
 }

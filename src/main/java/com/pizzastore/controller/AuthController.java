@@ -80,31 +80,44 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
+            // 1. Xác thực username/password
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
 
-            // --- LẤY THÔNG TIN USER VÀ ROLE ---
-            // Ép kiểu principal về UserDetailsImpl (Class chúng ta tự viết)
+            // 2. Lấy thông tin UserDetails
             com.pizzastore.security.UserDetailsImpl userDetails =
                     (com.pizzastore.security.UserDetailsImpl) authentication.getPrincipal();
 
-            // Lấy role đầu tiên (vì mỗi user chỉ có 1 role trong hệ thống này)
             String role = userDetails.getAuthorities().stream()
                     .findFirst()
                     .get().getAuthority();
 
-            // Trả về Full thông tin
-            return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getUsername(), role));
+            String username = userDetails.getUsername();
+            String fullName = "Unknown User"; // Giá trị mặc định
+
+            if (role.contains("CUSTOMER")) {
+                // Nếu là khách -> Tìm trong bảng Customer
+                fullName = customerRepository.findByAccount_Username(username)
+                        .map(Customer::getFullName) // Nếu tìm thấy thì lấy tên
+                        .orElse("Khách hàng");      // Nếu không thấy thì để mặc định
+            } else {
+                // Nếu là MANAGER, STAFF, CHEF -> Tìm trong bảng Employee
+                fullName = employeeRepository.findByAccount_Username(username)
+                        .map(Employee::getFullName)
+                        .orElse("Nhân viên");
+            }
+            // ============================================================
+
+            // 4. Trả về Full thông tin (Kèm fullName)
+            return ResponseEntity.ok(new JwtResponse(jwt, username, role, fullName));
 
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            // Bắt lỗi sai tài khoản/mật khẩu
             return ResponseEntity.status(401).body("Lỗi đăng nhập: Sai tài khoản hoặc mật khẩu!");
         } catch (Exception e) {
-            // Bắt các lỗi khác
-            e.printStackTrace(); // In lỗi ra Console IntelliJ để debug
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Lỗi hệ thống: " + e.getMessage());
         }
     }

@@ -11,7 +11,7 @@ public class Employee extends Person { // <--- KẾ THỪA Ở ĐÂY
     private String position;
     private Double salaryPerHour;
     private LocalDateTime lastCheckIn;
-
+    private String email;
     // --- CONSTRUCTOR ---
     public Employee() {
         super(); // Gọi constructor của cha
@@ -49,4 +49,7 @@ public class Employee extends Person { // <--- KẾ THỪA Ở ĐÂY
 
     public LocalDateTime getLastCheckIn() { return lastCheckIn; }
     public void setLastCheckIn(LocalDateTime lastCheckIn) { this.lastCheckIn = lastCheckIn; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 }

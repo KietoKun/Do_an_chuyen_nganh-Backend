@@ -54,13 +54,18 @@ public class OrderController {
 
     // --- 2. DUYỆT ĐƠN & NẤU (Kích hoạt trừ kho) ---
     @PutMapping("/{id}/confirm")
-    @PreAuthorize("hasAnyRole('CHEF', 'STAFF')")
+    @PreAuthorize("hasAnyRole('CHEF', 'STAFF', 'MANAGER')")
     public ResponseEntity<?> confirmOrder(@PathVariable Long id) {
         try {
-            orderService.approveOrder(id);
-            return ResponseEntity.ok("Đã xác nhận đơn hàng và trừ kho thành công!");
+            // 1. Lấy username của nhân viên đang đăng nhập
+            String currentStaffUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+            // 2. Truyền vào service
+            orderService.approveOrder(id, currentStaffUsername);
+
+            return ResponseEntity.ok("Đã xác nhận đơn hàng và gán nhân viên xử lý thành công!");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi kho: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Lỗi: " + e.getMessage());
         }
     }
 

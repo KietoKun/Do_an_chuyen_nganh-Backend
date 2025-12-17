@@ -11,6 +11,7 @@ import com.pizzastore.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.pizzastore.dto.UserProfileResponse;
 
 @Service
 public class UserService {
@@ -50,6 +51,51 @@ public class UserService {
         } else {
             updateEmployeeInfo(account, request);
         }
+    }
+
+    public UserProfileResponse getUserProfile(String username) {
+        // 1. Tìm Account gốc
+        Account account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
+
+        UserProfileResponse response = new UserProfileResponse();
+        response.setUsername(account.getUsername());
+        response.setRole(account.getRole().name()); // Lấy Role (CUSTOMER, MANAGER...)
+
+        // 2. Kiểm tra xem là Customer hay Employee để lấy thông tin chi tiết
+        // (Giả sử bạn có quan hệ Account -> Customer và Account -> Employee)
+
+        // Cách 1: Tìm trong bảng Customer trước
+        java.util.Optional<Customer> customerOpt = customerRepository.findAll().stream()
+                .filter(c -> c.getAccount().getId().equals(account.getId()))
+                .findFirst();
+
+        if (customerOpt.isPresent()) {
+            Customer c = customerOpt.get();
+            response.setId(c.getId());
+            response.setFullName(c.getFullName());
+            response.setEmail(c.getEmail());
+            response.setPhoneNumber(c.getPhoneNumber());
+            response.setAddress(c.getAddress()); // Khách hàng có địa chỉ
+            return response;
+        }
+
+        // Cách 2: Nếu không phải Customer, tìm trong bảng Employee (Cho Admin/Staff)
+        java.util.Optional<Employee> employeeOpt = employeeRepository.findAll().stream()
+                .filter(e -> e.getAccount().getId().equals(account.getId()))
+                .findFirst();
+
+        if (employeeOpt.isPresent()) {
+            Employee e = employeeOpt.get();
+            response.setId(e.getId());
+            response.setFullName(e.getFullName());
+            response.setEmail(e.getEmail());
+            response.setPhoneNumber(e.getPhoneNumber());
+            response.setAddress("N/A"); // Nhân viên thường không lưu địa chỉ giao hàng
+            return response;
+        }
+
+        throw new RuntimeException("Không tìm thấy hồ sơ chi tiết cho tài khoản này!");
     }
 
     private void updateCustomerInfo(Account account, UpdateProfileRequest request) {

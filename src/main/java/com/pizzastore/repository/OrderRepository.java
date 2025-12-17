@@ -2,8 +2,11 @@ package com.pizzastore.repository;
 
 import com.pizzastore.entity.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
@@ -13,4 +16,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Tìm theo trạng thái (Ví dụ: Bếp tìm các đơn đang PENDING)
     // List<Order> findByStatus(OrderStatus status);
     List<Order> findByCustomer_Account_UsernameOrderByOrderTimeDesc(String username);
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.customer.id = :customerId AND o.couponCode = :code AND o.status <> 'CANCELLED'")
+    long countUsedByCustomer(@Param("customerId") Long customerId, @Param("code") String code);
 }

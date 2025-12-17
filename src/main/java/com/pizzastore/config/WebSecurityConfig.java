@@ -65,6 +65,8 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/dishes/**", "/api/toppings/**").permitAll() // Cho phép xem món
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                                 .requestMatchers("/api/payment/**").permitAll()
+                                .requestMatchers("/api/coupons/public").permitAll() // Ai cũng xem được danh sách mã
+                                .requestMatchers("/api/coupons/check").permitAll()  // (Nếu có) Cho phép khách kiểm tra mã
                                 .anyRequest().authenticated()
                 );
 

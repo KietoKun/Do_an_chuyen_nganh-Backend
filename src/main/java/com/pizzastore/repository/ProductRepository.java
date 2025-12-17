@@ -16,4 +16,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Tìm các nguyên liệu sắp hết hàng (Ví dụ: Tồn kho < 10)
     List<Product> findByStockQuantityLessThan(Double quantity);
+
+    Product findByName(String name);
 }
