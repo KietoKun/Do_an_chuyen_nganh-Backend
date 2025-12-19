@@ -6,7 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate; // <--- Cần import cái này để set ngày hết hạn
+import java.time.LocalDate;
 
 @Component
 public class DatabaseSeeder implements CommandLineRunner {
@@ -15,14 +15,14 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final DishRepository dishRepository;
     private final CategoryRepository categoryRepository;
     private final ToppingRepository toppingRepository;
-    private final CouponRepository couponRepository; // <--- 1. Khai báo Repository mới
+    private final CouponRepository couponRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public DatabaseSeeder(ProductRepository productRepository,
                           DishRepository dishRepository,
                           CategoryRepository categoryRepository,
                           ToppingRepository toppingRepository,
-                          CouponRepository couponRepository) { // <--- 2. Thêm vào Constructor
+                          CouponRepository couponRepository) {
         this.productRepository = productRepository;
         this.dishRepository = dishRepository;
         this.categoryRepository = categoryRepository;
@@ -33,14 +33,12 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        // Kiểm tra nếu đã có dữ liệu Dish thì bỏ qua phần tạo Menu (để tránh trùng lặp)
-        // Tuy nhiên, ta sẽ check riêng lẻ từng phần nếu muốn bổ sung sau này.
+        System.out.println(">>> Bắt đầu Seeding dữ liệu (CHẾ ĐỘ TEST KHO THẤP)...");
 
-        System.out.println(">>> Bắt đầu Seeding dữ liệu...");
+        // QUAN TRỌNG:
+        // Nếu bạn muốn reset lại dữ liệu cũ, hãy đổi ddl-auto=create-drop trong application.properties một lần
+        // Hoặc xóa tay các bảng trong pgAdmin trước khi chạy lại.
 
-        // -----------------------------------------------------------
-        // PHẦN 1, 2, 3: MENU & NGUYÊN LIỆU (Giữ nguyên logic cũ của bạn)
-        // -----------------------------------------------------------
         if (dishRepository.count() == 0) {
             // 1. TẠO CATEGORY
             Category catPizza = categoryRepository.save(new Category("Pizza"));
@@ -49,17 +47,26 @@ public class DatabaseSeeder implements CommandLineRunner {
             Category catDrink = categoryRepository.save(new Category("Nước uống"));
             Category catDessert = categoryRepository.save(new Category("Tráng miệng"));
 
-            // 2. TẠO NGUYÊN LIỆU (Product)
-            Product botMi = productRepository.save(new Product("Bột mì", 100.0, "kg"));
-            Product phoMai = productRepository.save(new Product("Phô mai Mozzarella", 50.0, "kg"));
-            Product sotCa = productRepository.save(new Product("Sốt cà chua", 50.0, "lit"));
-            Product tom = productRepository.save(new Product("Tôm", 20.0, "kg"));
-            Product muc = productRepository.save(new Product("Mực", 20.0, "kg"));
-            Product boBam = productRepository.save(new Product("Bò băm", 20.0, "kg"));
-            Product xucXich = productRepository.save(new Product("Xúc xích", 20.0, "kg"));
-            Product myY = productRepository.save(new Product("Mỳ Ý khô", 50.0, "kg"));
-            Product kem = productRepository.save(new Product("Kem tươi", 20.0, "lit"));
-            Product coca = productRepository.save(new Product("Coca Cola", 100.0, "lon"));
+            // 2. TẠO NGUYÊN LIỆU (Product) - ĐÃ GIẢM SỐ LƯỢNG ĐỂ TEST
+            // Giả sử 1 Pizza cần 0.2kg bột -> 2kg làm được 10 cái
+            Product botMi = productRepository.save(new Product("Bột mì", 2.0, "kg")); // Cũ: 100.0
+
+            // Giả sử 1 Pizza cần 0.1kg phô mai -> 1.5kg làm được 15 cái
+            Product phoMai = productRepository.save(new Product("Phô mai Mozzarella", 1.5, "kg")); // Cũ: 50.0
+
+            Product sotCa = productRepository.save(new Product("Sốt cà chua", 2.0, "lit")); // Cũ: 50.0
+
+            // Tôm đắt tiền, để ít thôi -> 1kg (Làm được khoảng 5-7 cái Pizza Hải sản)
+            Product tom = productRepository.save(new Product("Tôm", 1.0, "kg")); // Cũ: 20.0
+
+            Product muc = productRepository.save(new Product("Mực", 1.0, "kg")); // Cũ: 20.0
+            Product boBam = productRepository.save(new Product("Bò băm", 2.0, "kg")); // Cũ: 20.0
+            Product xucXich = productRepository.save(new Product("Xúc xích", 2.0, "kg")); // Cũ: 20.0
+            Product myY = productRepository.save(new Product("Mỳ Ý khô", 3.0, "kg")); // Cũ: 50.0
+            Product kem = productRepository.save(new Product("Kem tươi", 2.0, "lit")); // Cũ: 20.0
+
+            // Nước ngọt: Để 5 lon -> Mua 6 lon là lỗi ngay
+            Product coca = productRepository.save(new Product("Coca Cola", 5.0, "lon")); // Cũ: 100.0
 
             // 3. TẠO MÓN ĂN (DISHES)
             // --- NHÓM PIZZA ---
@@ -133,11 +140,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                     59000.0, botMi, 0.05, null, 0);
         }
 
-        // -----------------------------------------------------------
-        // PHẦN 4: TOPPING (Giữ nguyên)
-        // -----------------------------------------------------------
+        // 4. TOPPING (Giữ nguyên)
         if (toppingRepository.count() == 0) {
-            Product phoMai = productRepository.findByName("Phô mai Mozzarella"); // Tìm lại để gán nếu cần
+            Product phoMai = productRepository.findByName("Phô mai Mozzarella");
             Product xucXich = productRepository.findByName("Xúc xích");
             Product botMi = productRepository.findByName("Bột mì");
 
@@ -169,42 +174,31 @@ public class DatabaseSeeder implements CommandLineRunner {
             }
         }
 
-        // -----------------------------------------------------------
-        // PHẦN 5: TẠO MÃ GIẢM GIÁ (COUPON) - [MỚI BỔ SUNG]
-        // -----------------------------------------------------------
+        // 5. COUPON (Giữ nguyên)
         if (couponRepository.count() == 0) {
-            System.out.println(">>> Đang tạo dữ liệu Coupon...");
-
-            // Coupon 1: Giảm 10% (WELCOME10)
             Coupon c1 = new Coupon();
             c1.setCode("WELCOME10");
             c1.setDiscountPercent(10.0);
-            c1.setDiscountAmount(0.0); // Không giảm tiền mặt
+            c1.setDiscountAmount(0.0);
             c1.setActive(true);
-            c1.setExpirationDate(LocalDate.now().plusMonths(3)); // Hết hạn sau 3 tháng
+            c1.setExpirationDate(LocalDate.now().plusMonths(3));
             couponRepository.save(c1);
 
-            // Coupon 2: Giảm 50k (HELLOSUMMER) - Áp dụng đơn từ 200k
             Coupon c2 = new Coupon();
             c2.setCode("HELLOSUMMER");
-            c2.setDiscountPercent(0.0); // Không giảm phần trăm
+            c2.setDiscountPercent(0.0);
             c2.setDiscountAmount(50000.0);
             c2.setActive(true);
-            c2.setExpirationDate(LocalDate.now().plusDays(30)); // Hết hạn sau 30 ngày
+            c2.setExpirationDate(LocalDate.now().plusDays(30));
             couponRepository.save(c2);
 
-            // Coupon 3: Mã đã hết hạn (để test lỗi)
             Coupon c3 = new Coupon();
             c3.setCode("EXPIRED2023");
             c3.setDiscountPercent(50.0);
-            c3.setActive(false); // Đã vô hiệu hóa
+            c3.setActive(false);
             c3.setExpirationDate(LocalDate.of(2023, 12, 31));
             couponRepository.save(c3);
-
-            System.out.println("   + Đã tạo 3 mã giảm giá.");
         }
-
-        System.out.println(">>> SEEDING DỮ LIỆU HOÀN TẤT!");
     }
 
     // --- HELPER METHODS (Giữ nguyên) ---
@@ -217,6 +211,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         dish.setCategory(cat);
         dish.setAvailable(true);
 
+        // Lưu ý: Món XL dùng 0.4kg bột. Nếu kho có 2kg -> làm được 5 cái size XL là hết.
         addVariant(dish, "M", 120000.0, bot, 0.2, phomai, 0.1, topping, 0.1);
         addVariant(dish, "L", 180000.0, bot, 0.3, phomai, 0.15, topping, 0.15);
         addVariant(dish, "XL", 250000.0, bot, 0.4, phomai, 0.2, topping, 0.2);

@@ -1,7 +1,7 @@
 package com.pizzastore.controller;
 
+import com.pizzastore.dto.CreateEmployeeRequest;
 import com.pizzastore.dto.EmployeeResponse; // Đảm bảo đã import DTO này
-import com.pizzastore.enums.RoleName;
 import com.pizzastore.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -69,19 +69,3 @@ public class EmployeeController {
     }
 }
 
-// DTO Request (Giữ nguyên ở cuối file)
-class CreateEmployeeRequest {
-    private String fullName;
-    private String phoneNumber;
-    private String position;
-    private RoleName role;
-
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
-    public String getPosition() { return position; }
-    public void setPosition(String position) { this.position = position; }
-    public RoleName getRole() { return role; }
-    public void setRole(RoleName role) { this.role = role; }
-}

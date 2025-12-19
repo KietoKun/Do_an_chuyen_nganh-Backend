@@ -25,8 +25,6 @@ public class OrderService {
     private final DishService dishService;
     private final ToppingRepository toppingRepository;
     private final CouponRepository couponRepository;
-
-    // [1] THÊM REPOSITORY NÀY ĐỂ TÌM NHÂN VIÊN
     private final EmployeeRepository employeeRepository;
 
     @Autowired
@@ -38,7 +36,7 @@ public class OrderService {
                         DishService dishService,
                         ToppingRepository toppingRepository,
                         CouponRepository couponRepository,
-                        EmployeeRepository employeeRepository) { // [1] Thêm vào Constructor
+                        EmployeeRepository employeeRepository) {
         this.orderRepository = orderRepository;
         this.dishVariantRepository = dishVariantRepository;
         this.customerRepository = customerRepository;
@@ -47,14 +45,11 @@ public class OrderService {
         this.dishService = dishService;
         this.toppingRepository = toppingRepository;
         this.couponRepository = couponRepository;
-        this.employeeRepository = employeeRepository; // [1] Gán biến
+        this.employeeRepository = employeeRepository;
     }
 
     @Transactional
     public Order createOrder(String username, OrderRequest request) {
-        // ... (GIỮ NGUYÊN TOÀN BỘ LOGIC TẠO ĐƠN CỦA BẠN Ở ĐÂY) ...
-        // Vì lúc tạo đơn là khách tạo, chưa có nhân viên quản lý nên handledBy = null (mặc định)
-
         // 1. Tìm Customer...
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
@@ -70,6 +65,7 @@ public class OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setNote(request.getNote());
 
+        // --- XỬ LÝ GIAO HÀNG ---
         DeliveryMethod method = DeliveryMethod.DELIVERY;
         if (request.getDeliveryMethod() != null && !request.getDeliveryMethod().isEmpty()) {
             try {
@@ -95,6 +91,7 @@ public class OrderService {
 
         double totalAmount = 0;
 
+        // 3. Duyệt Items để tính tiền & tạo Detail
         for (OrderRequest.CartItem item : request.getItems()) {
             DishVariant variant = dishVariantRepository.findById(item.getVariantId())
                     .orElseThrow(() -> new RuntimeException("Món/Size ID " + item.getVariantId() + " không tồn tại"));
@@ -105,10 +102,8 @@ public class OrderService {
 
             boolean hasToppings = item.getToppingIds() != null && !item.getToppingIds().isEmpty();
             String categoryName = variant.getDish().getCategory().getName();
-
             if (hasToppings && !categoryName.equalsIgnoreCase("Pizza")) {
-                throw new RuntimeException("Chỉ có thể thêm Topping cho món Pizza. Món '"
-                        + variant.getDish().getName() + "' không hỗ trợ.");
+                throw new RuntimeException("Chỉ có thể thêm Topping cho món Pizza.");
             }
 
             OrderDetail detail = new OrderDetail();
@@ -117,14 +112,10 @@ public class OrderService {
 
             double toppingsPrice = 0;
             List<Topping> toppings = new ArrayList<>();
-
-            if (item.getToppingIds() != null && !item.getToppingIds().isEmpty()) {
+            if (hasToppings) {
                 toppings = toppingRepository.findAllById(item.getToppingIds());
                 detail.setToppings(toppings);
-
-                for (Topping t : toppings) {
-                    toppingsPrice += t.getPrice();
-                }
+                for (Topping t : toppings) toppingsPrice += t.getPrice();
             }
 
             double finalUnitPrice = variant.getPrice() + toppingsPrice;
@@ -136,53 +127,77 @@ public class OrderService {
             order.addDetail(detail);
         }
 
-        order.setTotalPrice(totalAmount);
+        // =========================================================================
+        // [QUAN TRỌNG] 4. TRỪ KHO NGAY LẬP TỨC (HARD RESERVATION)
+        // Logic này chuyển từ approveOrder LÊN ĐÂY.
+        // =========================================================================
+        for (OrderDetail detail : order.getOrderDetails()) {
+            DishVariant variant = detail.getDishVariant();
+            int quantityOrdered = detail.getQuantity();
 
+            // A. Trừ kho theo công thức món chính
+            for (Recipe recipe : variant.getRecipes()) {
+                Product product = recipe.getProduct();
+                double totalNeeded = recipe.getQuantityNeeded() * quantityOrdered;
+
+                if (product.getStockQuantity() < totalNeeded) {
+                    throw new RuntimeException("HẾT HÀNG! Món '" + variant.getDish().getName() +
+                            "' (" + variant.getSize() + ") không đủ nguyên liệu: " + product.getName());
+                }
+                product.setStockQuantity(product.getStockQuantity() - totalNeeded);
+                productRepository.save(product);
+            }
+
+            // B. Trừ kho theo Topping
+            if (detail.getToppings() != null) {
+                for (Topping topping : detail.getToppings()) {
+                    Product product = topping.getProduct();
+                    double totalNeeded = topping.getQuantityNeeded() * quantityOrdered;
+
+                    if (product.getStockQuantity() < totalNeeded) {
+                        throw new RuntimeException("HẾT HÀNG! Topping '" + topping.getName() +
+                                "' không đủ nguyên liệu: " + product.getName());
+                    }
+                    product.setStockQuantity(product.getStockQuantity() - totalNeeded);
+                    productRepository.save(product);
+                }
+            }
+            // Check lại món còn available không
+            dishService.refreshDishAvailability(variant.getDish());
+        }
+        // =========================================================================
+
+        // 5. Tính toán Coupon
+        order.setTotalPrice(totalAmount);
         double discountAmount = 0;
 
         if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
             String code = request.getCouponCode().toUpperCase();
-
             Coupon coupon = couponRepository.findByCode(code)
                     .orElseThrow(() -> new RuntimeException("Mã giảm giá không tồn tại!"));
 
-            if (coupon == null) throw new RuntimeException("Mã giảm giá không tồn tại!");
-
-            LocalDate today = LocalDate.now();
-
             if (!coupon.isActive()) throw new RuntimeException("Mã giảm giá đang bị khóa!");
-
-            if (coupon.getExpirationDate() != null && today.isAfter(coupon.getExpirationDate())) {
-                throw new RuntimeException("Mã giảm giá đã hết hạn vào ngày " + coupon.getExpirationDate());
+            if (coupon.getExpirationDate() != null && LocalDate.now().isAfter(coupon.getExpirationDate())) {
+                throw new RuntimeException("Mã giảm giá đã hết hạn!");
             }
-
             if (coupon.getUsageLimit() != null && coupon.getUsageCount() >= coupon.getUsageLimit()) {
                 throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng!");
             }
-
             if (coupon.getMinOrderAmount() != null && totalAmount < coupon.getMinOrderAmount()) {
-                throw new RuntimeException("Đơn hàng chưa đủ giá trị tối thiểu ("
-                        + String.format("%,.0f", coupon.getMinOrderAmount()) + " đ) để dùng mã này!");
+                throw new RuntimeException("Đơn hàng chưa đủ giá trị tối thiểu!");
             }
-
             long usedCount = orderRepository.countUsedByCustomer(customer.getId(), code);
-            if (usedCount > 0) {
-                throw new RuntimeException("Bạn đã sử dụng mã này rồi (Mỗi khách chỉ được dùng 1 lần)!");
-            }
+            if (usedCount > 0) throw new RuntimeException("Bạn đã dùng mã này rồi!");
 
             if (coupon.getDiscountPercent() != null && coupon.getDiscountPercent() > 0) {
                 discountAmount = totalAmount * (coupon.getDiscountPercent() / 100.0);
                 if (coupon.getMaxDiscountAmount() != null && discountAmount > coupon.getMaxDiscountAmount()) {
                     discountAmount = coupon.getMaxDiscountAmount();
                 }
-            }
-            else if (coupon.getDiscountAmount() != null && coupon.getDiscountAmount() > 0) {
+            } else if (coupon.getDiscountAmount() != null) {
                 discountAmount = coupon.getDiscountAmount();
             }
-
-            if (discountAmount > totalAmount) {
-                discountAmount = totalAmount;
-            }
+            if (discountAmount > totalAmount) discountAmount = totalAmount;
 
             coupon.setUsageCount(coupon.getUsageCount() + 1);
             couponRepository.save(coupon);
@@ -191,13 +206,13 @@ public class OrderService {
             order.setDiscountAmount(discountAmount);
         }
 
-        double finalTotal = totalAmount - discountAmount;
-        order.setFinalTotalPrice(finalTotal);
+        order.setFinalTotalPrice(totalAmount - discountAmount);
 
+        // Lưu đơn hàng (Lúc này kho đã bị trừ thành công)
         return orderRepository.save(order);
     }
 
-    // [2] SỬA LẠI HÀM NÀY: THÊM THAM SỐ staffUsername
+    // [HÀM ĐÃ SỬA] CHỈ CÒN GÁN NHÂN VIÊN VÀ ĐỔI TRẠNG THÁI
     @Transactional
     public void approveOrder(Long orderId, String staffUsername) {
         Order order = orderRepository.findById(orderId)
@@ -207,49 +222,59 @@ public class OrderService {
             throw new RuntimeException("Đơn hàng này không thể duyệt (đang nấu hoặc đã hủy)!");
         }
 
-        // --- [3] TÌM VÀ GÁN NHÂN VIÊN XỬ LÝ ---
         Employee staff = employeeRepository.findByAccount_Username(staffUsername)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin nhân viên: " + staffUsername));
+        order.setHandledBy(staff);
 
-        order.setHandledBy(staff); // Gán nhân viên vào đơn hàng
-        // -------------------------------------
+        // [LƯU Ý]: Đã xóa đoạn code trừ kho ở đây đi rồi nhé!
 
-        // LOGIC TRỪ KHO (Giữ nguyên)
+        order.setStatus(OrderStatus.CONFIRMED);
+        orderRepository.save(order);
+    }
+
+    // [HÀM MỚI] CẦN THÊM HÀM NÀY ĐỂ HOÀN LẠI KHO NẾU HỦY ĐƠN
+    @Transactional
+    public void cancelOrder(Long orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại"));
+
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.COMPLETED) {
+            throw new RuntimeException("Không thể hủy đơn hàng này!");
+        }
+
+        // --- HOÀN TRẢ LẠI KHO (ROLLBACK STOCK) ---
         for (OrderDetail detail : order.getOrderDetails()) {
+            int qty = detail.getQuantity();
             DishVariant variant = detail.getDishVariant();
-            int quantityOrdered = detail.getQuantity();
 
-            // A. TRỪ KHO THEO CÔNG THỨC MÓN ĂN
+            // 1. Hoàn nguyên liệu món chính
             for (Recipe recipe : variant.getRecipes()) {
-                Product product = recipe.getProduct();
-                double totalNeeded = recipe.getQuantityNeeded() * quantityOrdered;
-
-                if (product.getStockQuantity() < totalNeeded) {
-                    throw new RuntimeException("Không đủ nguyên liệu món chính: " + product.getName());
-                }
-                product.setStockQuantity(product.getStockQuantity() - totalNeeded);
-                productRepository.save(product);
+                Product p = recipe.getProduct();
+                p.setStockQuantity(p.getStockQuantity() + (recipe.getQuantityNeeded() * qty));
+                productRepository.save(p);
             }
 
-            // B. TRỪ KHO THEO TOPPING
+            // 2. Hoàn nguyên liệu topping
             if (detail.getToppings() != null) {
-                for (Topping topping : detail.getToppings()) {
-                    Product product = topping.getProduct();
-                    double totalNeeded = topping.getQuantityNeeded() * quantityOrdered;
-
-                    if (product.getStockQuantity() < totalNeeded) {
-                        throw new RuntimeException("Thiếu nguyên liệu cho Topping: " + topping.getName());
-                    }
-
-                    product.setStockQuantity(product.getStockQuantity() - totalNeeded);
-                    productRepository.save(product);
+                for (Topping t : detail.getToppings()) {
+                    Product p = t.getProduct();
+                    p.setStockQuantity(p.getStockQuantity() + (t.getQuantityNeeded() * qty));
+                    productRepository.save(p);
                 }
             }
-
             dishService.refreshDishAvailability(variant.getDish());
         }
 
-        order.setStatus(OrderStatus.COOKING);
+        // 3. Hoàn lại lượt dùng Coupon (nếu có)
+        if (order.getCouponCode() != null) {
+            couponRepository.findByCode(order.getCouponCode()).ifPresent(coupon -> {
+                coupon.setUsageCount(coupon.getUsageCount() - 1);
+                couponRepository.save(coupon);
+            });
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setNote(order.getNote() + " | Đã hủy: " + reason);
         orderRepository.save(order);
     }
 }
