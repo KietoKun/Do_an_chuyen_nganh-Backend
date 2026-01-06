@@ -57,7 +57,6 @@ public class AuthController {
 
         // 2. Tạo Account
         Account account = new Account();
-        // QUAN TRỌNG: Dùng SĐT làm Username đăng nhập
         account.setUsername(signUpRequest.getPhoneNumber());
         account.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
         account.setRole(RoleName.CUSTOMER);
@@ -98,7 +97,7 @@ public class AuthController {
                     .get().getAuthority();
 
             String username = userDetails.getUsername();
-            String fullName = "Unknown User"; // Giá trị mặc định
+            String fullName = "Unknown User";
 
             if (role.contains("CUSTOMER")) {
                 // Nếu là khách -> Tìm trong bảng Customer
@@ -111,9 +110,7 @@ public class AuthController {
                         .map(Employee::getFullName)
                         .orElse("Nhân viên");
             }
-            // ============================================================
 
-            // 4. Trả về Full thông tin (Kèm fullName)
             return ResponseEntity.ok(new JwtResponse(jwt, username, role, fullName));
 
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
@@ -137,7 +134,6 @@ public class AuthController {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản!"));
 
         // 3. Kiểm tra mật khẩu cũ có đúng không
-        // passwordEncoder.matches(pass_nhập_vào, pass_đã_mã_hóa_trong_db)
         if (!passwordEncoder.matches(request.getCurrentPassword(), account.getPassword())) {
             return ResponseEntity.badRequest().body("Mật khẩu hiện tại không đúng!");
         }
@@ -156,7 +152,6 @@ public class AuthController {
     }
     @PostMapping("/init-admin")
     public ResponseEntity<?> initAdmin() {
-        // Giả sử SĐT của chủ quán là 0900000000
         String adminPhone = "0900000000";
 
         if (accountRepository.existsByUsername(adminPhone)) {
@@ -165,10 +160,10 @@ public class AuthController {
 
         // 1. Tạo Account
         Account account = new Account();
-        account.setUsername(adminPhone); // Username là SĐT
-        account.setPassword(passwordEncoder.encode("123456")); // Mật khẩu mặc định
+        account.setUsername(adminPhone);
+        account.setPassword(passwordEncoder.encode("123456"));
         account.setRole(RoleName.MANAGER);
-        account.setFirstLogin(false); // Admin trùm thì khỏi cần đổi pass lần đầu cũng được
+        account.setFirstLogin(false);
 
         // 2. Tạo thông tin Employee (Admin)
         Employee admin = new Employee();

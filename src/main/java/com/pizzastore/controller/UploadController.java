@@ -23,10 +23,9 @@ public class UploadController {
     }
 
     // API Upload ảnh
-    // Thêm consumes = MediaType.MULTIPART_FORM_DATA_VALUE để Swagger hiểu
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('MANAGER', 'CHEF')")
-    public ResponseEntity<?> uploadImage(@RequestPart("file") MultipartFile file) { // <--- Đổi @RequestParam thành @RequestPart
+    public ResponseEntity<?> uploadImage(@RequestPart("file") MultipartFile file) {
         try {
             String url = imageService.uploadImage(file);
 

@@ -1,6 +1,6 @@
 package com.pizzastore.controller;
 
-import com.pizzastore.dto.PaymentResponse; // <--- Import file vừa tạo
+import com.pizzastore.dto.PaymentResponse;
 import com.pizzastore.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import jakarta.servlet.http.HttpServletResponse; // <--- Để dùng response.sendRedirect
-import java.io.IOException;                      // <--- Để xử lý lỗi IOException
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/payment")
@@ -20,9 +20,8 @@ public class PaymentController {
 
     @GetMapping("/create_payment")
     public ResponseEntity<?> createPayment(HttpServletRequest request,
-                                           @RequestParam Long orderId) { // Bỏ @RequestParam amount
+                                           @RequestParam Long orderId) {
 
-        // Gọi service (không truyền amount nữa)
         String paymentUrl = paymentService.createVnPayPayment(request, orderId);
 
         return ResponseEntity.ok(new PaymentResponse("OK", "URL thanh toán", paymentUrl));

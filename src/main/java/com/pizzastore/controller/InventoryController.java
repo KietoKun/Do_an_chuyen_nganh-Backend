@@ -1,18 +1,12 @@
 package com.pizzastore.controller;
 
-// 1. Import các Class trong dự án của bạn
 import com.pizzastore.entity.Product;
 import com.pizzastore.repository.ProductRepository;
-
-// 2. Import thư viện Spring Framework (Dependency Injection & Web)
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-// 3. Import thư viện Bảo mật (Để phân quyền cho Chef)
 import org.springframework.security.access.prepost.PreAuthorize;
 
-// 4. Import thư viện Java cơ bản (List)
 import java.util.List;
 
 @RestController
@@ -29,7 +23,6 @@ public class InventoryController {
     }
 
     // --- 1. LẤY DANH SÁCH NGUYÊN LIỆU (Xem kho) ---
-    // Manager cần xem để báo cáo, Chef cần xem để nấu
     @GetMapping("/products")
     @PreAuthorize("hasAnyRole('MANAGER', 'CHEF')")
     public ResponseEntity<List<Product>> getAllProducts() {
@@ -41,7 +34,6 @@ public class InventoryController {
     @PostMapping("/products")
     @PreAuthorize("hasAnyRole('CHEF', 'MANAGER')")
     public ResponseEntity<?> addOrUpdateProduct(@RequestBody Product product) {
-        // Lưu xuống DB (Nếu có ID thì là update, chưa có là tạo mới)
         Product savedProduct = productRepository.save(product);
         dishService.refreshAllDishesAvailability();
         return ResponseEntity.ok(savedProduct);
@@ -49,7 +41,7 @@ public class InventoryController {
 
     // --- 3. XÓA NGUYÊN LIỆU (Nếu nhập sai) ---
     @DeleteMapping("/products/{id}")
-    @PreAuthorize("hasRole('MANAGER')") // Chỉ Manager được xóa cho an toàn
+    @PreAuthorize("hasRole('MANAGER')") // Chỉ Manager được xóa
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         if (!productRepository.existsById(id)) {
             return ResponseEntity.badRequest().body("Nguyên liệu không tồn tại!");

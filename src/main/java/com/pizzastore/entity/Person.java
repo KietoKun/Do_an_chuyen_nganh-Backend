@@ -2,8 +2,6 @@ package com.pizzastore.entity;
 
 import jakarta.persistence.*;
 
-// @MappedSuperclass: Báo cho JPA biết đây là lớp cha,
-// các thuộc tính ở đây sẽ được nhúng vào bảng của lớp con.
 @MappedSuperclass
 public abstract class Person {
 
@@ -15,15 +13,12 @@ public abstract class Person {
     private String phoneNumber;
     private String address;
 
-    // Quan hệ Account (Mọi Person đều có tài khoản)
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "account_id", referencedColumnName = "id")
     private Account account;
 
-    // --- CONSTRUCTOR ---
     public Person() {}
 
-    // --- GETTERS & SETTERS (Dùng chung cho cả Employee và Customer) ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

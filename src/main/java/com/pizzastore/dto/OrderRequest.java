@@ -32,7 +32,6 @@ public class OrderRequest {
         @Schema(description = "Danh sách ID các topping đã chọn", example = "[1, 5, 8]")
         private List<Long> toppingIds = new ArrayList<>();
 
-        // --- GETTER & SETTER CartItem ---
         public Long getVariantId() { return variantId; }
         public void setVariantId(Long variantId) { this.variantId = variantId; }
 
@@ -43,7 +42,7 @@ public class OrderRequest {
         public void setToppingIds(List<Long> toppingIds) { this.toppingIds = toppingIds; }
     }
 
-    // --- GETTER & SETTER OrderRequest ---
+
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
 

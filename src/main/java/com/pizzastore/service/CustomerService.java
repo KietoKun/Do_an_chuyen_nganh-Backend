@@ -20,11 +20,9 @@ public class CustomerService {
         this.customerRepository = customerRepository;
     }
 
-    // --- 1. LẤY DANH SÁCH KHÁCH HÀNG ---
     public List<CustomerResponse> getAllCustomers() {
         List<Customer> customers = customerRepository.findAll();
 
-        // Chuyển đổi Entity sang DTO
         return customers.stream().map(cust -> new CustomerResponse(
                 cust.getId(),
                 cust.getFullName(),
@@ -38,7 +36,6 @@ public class CustomerService {
         Customer cust = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng với ID: " + id));
 
-        // Convert Entity -> DTO
         return new CustomerResponse(
                 cust.getId(),
                 cust.getFullName(),
@@ -49,17 +46,13 @@ public class CustomerService {
         );
     }
 
-    // --- 2. XÓA KHÁCH HÀNG ---
+
     @Transactional
     public void deleteCustomer(Long id) {
-        // Kiểm tra tồn tại
+
         if (!customerRepository.existsById(id)) {
             throw new RuntimeException("Khách hàng không tồn tại!");
         }
-
-        // TODO: Sau này có Order thì phải check thêm: "Nếu có đơn hàng thì không cho xóa"
-        // Hiện tại chưa có Order nên cho xóa thoải mái.
-
         customerRepository.deleteById(id);
     }
 }

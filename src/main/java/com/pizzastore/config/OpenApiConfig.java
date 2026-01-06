@@ -6,7 +6,7 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.servers.Server; // <--- Nhớ Import cái này
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,7 +25,7 @@ public class OpenApiConfig {
                         .description("Tài liệu API cho hệ thống cửa hàng Pizza")
                         .license(new License().name("Apache 2.0").url("http://springdoc.org")))
 
-                // 2. Cấu hình danh sách Server (QUAN TRỌNG: Cái bạn đang hỏi)
+                // 2. Cấu hình danh sách Server
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Server Local"),
                         new Server().url("http://160.191.242.181:8080").description("Server VPS (Production)")

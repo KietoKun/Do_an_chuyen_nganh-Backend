@@ -12,22 +12,19 @@ public class DishVariant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String size;  // S, M, L, XL, Standard
-    private Double price; // Giá tiền riêng cho size này
+    private String size;
+    private Double price;
 
     @ManyToOne
     @JoinColumn(name = "dish_id")
-    @JsonIgnore // Ngắt vòng lặp JSON khi in DishVariant
+    @JsonIgnore
     private Dish dish;
 
-    // Quan hệ: Một size có danh sách công thức riêng
     @OneToMany(mappedBy = "dishVariant", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Recipe> recipes = new ArrayList<>();
 
-    // ==========================================
-    // 1. CONSTRUCTORS
-    // ==========================================
+
     public DishVariant() {}
 
     public DishVariant(String size, Double price, Dish dish) {
@@ -36,19 +33,12 @@ public class DishVariant {
         this.dish = dish;
     }
 
-    // ==========================================
-    // 2. HELPER METHOD (Rất quan trọng)
-    // ==========================================
-    // Hàm này giúp thêm Recipe vào Variant và tự động gán ngược lại
-    // Giúp code Seeder ngắn gọn hơn, không bị quên setDishVariant
+
     public void addRecipe(Recipe recipe) {
         this.recipes.add(recipe);
         recipe.setDishVariant(this);
     }
 
-    // ==========================================
-    // 3. GETTERS & SETTERS (Bắt buộc phải có đủ)
-    // ==========================================
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

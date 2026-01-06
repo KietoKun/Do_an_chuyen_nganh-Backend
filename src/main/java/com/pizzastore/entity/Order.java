@@ -19,13 +19,13 @@ public class Order {
     // Tổng tiền gốc (Chưa giảm giá)
     private Double totalPrice;
 
-    // --- CÁC TRƯỜNG MỚI THÊM VÀO ---
-    private String couponCode;       // Mã giảm giá đã dùng
-    private Double discountAmount;   // Số tiền được giảm (VD: 50000.0)
-    private Double finalTotalPrice;  // Tổng tiền phải trả sau khi trừ khuyến mãi
-    // --------------------------------
 
-    private String note; // Ghi chú của khách (ít cay, không hành...)
+    private String couponCode;       // Mã giảm giá đã dùng
+    private Double discountAmount;   // Số tiền được giảm
+    private Double finalTotalPrice;  // Tổng tiền phải trả sau khi trừ khuyến mãi
+
+
+    private String note; // Ghi chú của khách
     private String deliveryAddress;
 
     @Enumerated(EnumType.STRING)
@@ -35,12 +35,11 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
-    // Ai đặt đơn này?
     @ManyToOne
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    // Chi tiết món ăn (Cascade ALL: Lưu Order tự lưu luôn Details)
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
@@ -48,17 +47,14 @@ public class Order {
     @JoinColumn(name = "employee_id", nullable = true)
     private Employee handledBy;
 
-    // --- Constructor ---
     public Order() {}
 
-    // Helper method để thêm món vào list cho dễ
+
     public void addDetail(OrderDetail detail) {
         orderDetails.add(detail);
         detail.setOrder(this);
     }
 
-
-    // --- Getter & Setter ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -69,7 +65,7 @@ public class Order {
     public Double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
 
-    // --- GETTER/SETTER CHO 3 TRƯỜNG MỚI ---
+
     public String getCouponCode() {
         return couponCode;
     }
@@ -93,7 +89,7 @@ public class Order {
     public void setFinalTotalPrice(Double finalTotalPrice) {
         this.finalTotalPrice = finalTotalPrice;
     }
-    // ---------------------------------------
+
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
@@ -113,7 +109,6 @@ public class Order {
     public String getDeliveryAddress() { return deliveryAddress; }
     public void setDeliveryAddress(String address) { this.deliveryAddress = address; }
 
-    // Getter & Setter
     public Employee getHandledBy() { return handledBy; }
     public void setHandledBy(Employee handledBy) { this.handledBy = handledBy; }
 }

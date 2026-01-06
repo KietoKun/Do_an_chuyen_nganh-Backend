@@ -10,22 +10,20 @@ public class Topping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;   // Tên: Thêm Phô Mai
-    private Double price;  // Giá bán: 15.000
+    private String name;
+    private Double price;
 
-    // Topping này trừ vào nguyên liệu nào trong kho?
     @ManyToOne
     @JoinColumn(name = "product_id")
-    @JsonIgnore // <--- 2. CHẶN KHÔNG CHO HIỆN KHO
+    @JsonIgnore
     private Product product;
 
-    @JsonIgnore // <--- 3. CHẶN KHÔNG CHO HIỆN CÔNG THỨC
-    private Double quantityNeeded; // Cần bao nhiêu nguyên liệu
+    @JsonIgnore
+    private Double quantityNeeded;
 
-    // --- CONSTRUCTOR ---
+
     public Topping() {}
 
-    // --- GETTERS & SETTERS ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

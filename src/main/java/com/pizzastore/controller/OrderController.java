@@ -26,45 +26,35 @@ public class OrderController {
         this.orderRepository = orderRepository;
     }
 
-    // ========================================================================
     // 1. TẠO ĐƠN HÀNG (KHÁCH HÀNG)
-    // Logic: Gọi Service để trừ kho ngay lập tức. Nếu lỗi (hết hàng) -> Báo ngay.
-    // ========================================================================
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<?> placeOrder(@RequestBody OrderRequest request) {
         try {
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-            // Hàm này sẽ ném RuntimeException nếu hết hàng
             Order newOrder = orderService.createOrder(currentUsername, request);
 
             return ResponseEntity.ok(newOrder);
 
         } catch (RuntimeException e) {
-            // Lỗi nghiệp vụ (Hết hàng, Coupon sai...) -> Trả về 400 Bad Request
+            // Lỗi nghiệp vụ (Hết hàng, Coupon sai...)
             return ResponseEntity.badRequest().body("Không thể đặt hàng: " + e.getMessage());
-        } catch (Exception e) {
-            // Lỗi hệ thống khác -> 500
+        } catch (Exception e){
             return ResponseEntity.status(500).body("Lỗi hệ thống: " + e.getMessage());
         }
     }
 
-    // ========================================================================
+
     // 2. LẤY ĐƠN HÀNG CHO BẾP
-    // ========================================================================
     @GetMapping("/kitchen")
     @PreAuthorize("hasAnyRole('CHEF', 'MANAGER', 'STAFF')")
     public ResponseEntity<?> getKitchenOrders() {
-        // Có thể bổ sung filter để chỉ lấy PENDING, COOKING, PAID
-        // List<Order> orders = orderRepository.findByStatusIn(List.of(OrderStatus.PENDING, OrderStatus.COOKING));
         return ResponseEntity.ok(orderRepository.findAll());
     }
-
-    // ========================================================================
+    
     // 3. DUYỆT ĐƠN (CONFIRM)
     // Logic: Gán nhân viên chịu trách nhiệm. Không trừ kho nữa (vì đã trừ lúc tạo).
-    // ========================================================================
     @PutMapping("/{id}/confirm")
     @PreAuthorize("hasAnyRole('CHEF', 'STAFF', 'MANAGER')")
     public ResponseEntity<?> confirmOrder(@PathVariable Long id) {
@@ -79,11 +69,8 @@ public class OrderController {
         }
     }
 
-    // ========================================================================
     // 4. CẬP NHẬT TIẾN ĐỘ (STATUS UPDATE)
-    // Logic: Chỉ dùng để chuyển tiếp (COOKING -> DELIVERING -> COMPLETED).
-    // [QUAN TRỌNG]: Chặn không cho chuyển sang CANCELLED ở đây.
-    // ========================================================================
+    // chuyển tiếp (COOKING -> DELIVERING -> COMPLETED).
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('CHEF', 'STAFF')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
@@ -104,12 +91,10 @@ public class OrderController {
         }
     }
 
-    // ========================================================================
-    // 5. HỦY ĐƠN & HOÀN KHO (CANCEL) - [MỚI]
+    // 5. HỦY ĐƠN & HOÀN KHO (CANCEL)
     // Logic: Gọi Service để cộng lại nguyên liệu vào kho.
-    // ========================================================================
     @PutMapping("/{id}/cancel")
-    @PreAuthorize("isAuthenticated()") // Khách hoặc Nhân viên đều có thể gọi (Service sẽ check logic kỹ hơn nếu cần)
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> cancelOrder(@PathVariable Long id, @RequestParam(required = false) String reason) {
         try {
             String cancelReason = (reason != null && !reason.isEmpty()) ? reason : "Không có lý do";
@@ -123,16 +108,13 @@ public class OrderController {
         }
     }
 
-    // ========================================================================
+
     // 6. LẤY LỊCH SỬ ĐƠN CỦA KHÁCH
-    // ========================================================================
     @GetMapping("/my-orders")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<?> getMyOrders() {
         try {
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-
-            // Đảm bảo bạn đã khai báo hàm này trong OrderRepository
             List<Order> orders = orderRepository.findByCustomer_Account_UsernameOrderByOrderTimeDesc(currentUsername);
 
             return ResponseEntity.ok(orders);

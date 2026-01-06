@@ -13,17 +13,15 @@ public class Product {
     private Double stockQuantity;
     private String unit;
 
-    // --- 1. CONSTRUCTOR RỖNG (Bắt buộc) ---
+
     public Product() {}
 
-    // --- 2. CONSTRUCTOR CÓ THAM SỐ (Cái bạn đang thiếu) ---
     public Product(String name, Double stockQuantity, String unit) {
         this.name = name;
         this.stockQuantity = stockQuantity;
         this.unit = unit;
     }
 
-    // --- GETTER & SETTER ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }

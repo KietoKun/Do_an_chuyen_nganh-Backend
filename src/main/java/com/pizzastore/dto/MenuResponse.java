@@ -10,7 +10,6 @@ public class MenuResponse {
     private String category;
     private List<VariantDto> variants;
 
-    // --- CONSTRUCTOR ---
     public MenuResponse(Long id, String name, String description, String imageUrl, String category, List<VariantDto> variants) {
         this.id = id;
         this.name = name;
@@ -20,7 +19,6 @@ public class MenuResponse {
         this.variants = variants;
     }
 
-    // --- GETTERS & SETTERS (Lớp Cha) ---
 
     public Long getId() {
         return id;
@@ -70,9 +68,6 @@ public class MenuResponse {
         this.variants = variants;
     }
 
-    // ==========================================
-    // INNER CLASS: VARIANT DTO
-    // ==========================================
     public static class VariantDto {
         private Long id;
         private String size;
@@ -86,7 +81,6 @@ public class MenuResponse {
             this.maxQuantity = maxQuantity;
         }
 
-        // --- GETTERS & SETTERS (Lớp Con) ---
 
         public Long getId() {
             return id;

@@ -21,11 +21,11 @@ public class Account {
 
     private boolean isFirstLogin = true;
 
-    // --- CONSTRUCTOR ---
+
     public Account() {
     }
 
-    // --- GETTERS & SETTERS (Viết tay để thay thế Lombok) ---
+
     public Long getId() {
         return id;
     }

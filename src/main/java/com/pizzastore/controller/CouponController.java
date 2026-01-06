@@ -21,8 +21,6 @@ public class CouponController {
         this.couponRepository = couponRepository;
     }
 
-    // ===================== DÀNH CHO MANAGER (QUẢN LÝ) =====================
-
     // 1. Tạo mã giảm giá mới
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
@@ -51,10 +49,8 @@ public class CouponController {
                 return ResponseEntity.badRequest().body("Phần trăm giảm giá không thể quá 100%!");
             }
 
-            // --- [THÊM LOGIC VALIDATE MỚI CHO MAX CAP] ---
             // Nếu giảm theo % thì NÊN có Max Cap (cảnh báo hoặc bắt buộc tùy bạn)
             if (hasPercent && (coupon.getMaxDiscountAmount() == null || coupon.getMaxDiscountAmount() <= 0)) {
-                // Đây là warning nhẹ, hoặc bạn có thể bắt buộc phải nhập
                 // return ResponseEntity.badRequest().body("Vui lòng nhập số tiền giảm tối đa (Max Cap) khi giảm theo %!");
             }
             // ----------------------------------------------
@@ -73,7 +69,6 @@ public class CouponController {
     @GetMapping("/manager")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<?> getAllCouponsForManager() {
-        // Trả về list để Admin quản lý
         return ResponseEntity.ok(couponRepository.findAll());
     }
 
@@ -84,8 +79,6 @@ public class CouponController {
         if (!couponRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        // Có thể chọn xóa cứng (delete) hoặc xóa mềm (set active = false)
-        // Ở đây xóa cứng theo code cũ của bạn
         couponRepository.deleteById(id);
         return ResponseEntity.ok("Đã xóa mã giảm giá thành công");
     }
@@ -101,21 +94,16 @@ public class CouponController {
         return ResponseEntity.ok(couponRepository.save(coupon));
     }
 
-    // ===================== DÀNH CHO KHÁCH HÀNG (PUBLIC) =====================
-
     // 4. Lấy danh sách mã đang khuyến mãi (Ai cũng xem được)
     @GetMapping("/public")
     public ResponseEntity<?> getAvailableCoupons() {
-        // Hàm này đã được sửa query trong CouponRepository ở bước trước
         List<Coupon> validCoupons = couponRepository.findValidCoupons();
         return ResponseEntity.ok(validCoupons);
     }
 
-    // 5. API Kiểm tra mã nhanh (Cho Frontend gọi khi khách nhập vào ô input)
+    // 5. API Kiểm tra mã nhanh
     @PostMapping("/check")
     public ResponseEntity<?> checkCouponCode(@RequestBody String code) {
-        // Code xử lý kiểm tra (gọi lại logic giống OrderService hoặc trả về thông tin coupon)
-        // Đây là ví dụ đơn giản:
         try {
             Coupon coupon = couponRepository.findByCode(code.toUpperCase())
                     .orElseThrow(() -> new RuntimeException("Mã không tồn tại"));

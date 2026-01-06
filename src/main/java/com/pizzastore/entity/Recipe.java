@@ -10,9 +10,8 @@ public class Recipe {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- 1. SỬA LIÊN KẾT: Trỏ tới DishVariant (Size) thay vì Dish chung ---
     @ManyToOne
-    @JoinColumn(name = "variant_id") // Đặt tên cột khóa ngoại là variant_id cho rõ nghĩa
+    @JoinColumn(name = "variant_id")
     @JsonIgnore
     private DishVariant dishVariant;
 
@@ -22,23 +21,19 @@ public class Recipe {
 
     private Double quantityNeeded;
 
-    // ==========================================
-    // CONSTRUCTORS
-    // ==========================================
+
 
     public Recipe() {
     }
 
-    // --- 2. SỬA CONSTRUCTOR: Nhận vào DishVariant ---
+
     public Recipe(DishVariant dishVariant, Product product, Double quantityNeeded) {
         this.dishVariant = dishVariant;
         this.product = product;
         this.quantityNeeded = quantityNeeded;
     }
 
-    // ==========================================
-    // GETTERS & SETTERS
-    // ==========================================
+
 
     public Long getId() {
         return id;
@@ -48,7 +43,6 @@ public class Recipe {
         this.id = id;
     }
 
-    // --- 3. SỬA GETTER/SETTER: Đổi Dish thành DishVariant ---
     public DishVariant getDishVariant() {
         return dishVariant;
     }

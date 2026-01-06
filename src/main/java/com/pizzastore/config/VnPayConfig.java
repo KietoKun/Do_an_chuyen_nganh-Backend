@@ -33,7 +33,6 @@ public class VnPayConfig {
         this.vnp_ApiUrl = vnp_ApiUrl;
     }
 
-    // --- 2. GETTERS THỦ CÔNG (Thay thế cho @Getter của Lombok) ---
     public String getVnp_PayUrl() {
         return vnp_PayUrl;
     }
@@ -100,11 +99,9 @@ public class VnPayConfig {
         return sb.toString();
     }
     public String hashAllFields(java.util.Map<String, String> fields) {
-        // 1. Sắp xếp tham số theo A-Z
         java.util.List<String> fieldNames = new java.util.ArrayList<>(fields.keySet());
         java.util.Collections.sort(fieldNames);
 
-        // 2. Tạo chuỗi dữ liệu
         StringBuilder sb = new StringBuilder();
         java.util.Iterator<String> itr = fieldNames.iterator();
         while (itr.hasNext()) {

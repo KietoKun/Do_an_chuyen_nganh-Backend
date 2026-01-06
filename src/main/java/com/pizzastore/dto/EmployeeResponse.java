@@ -17,7 +17,6 @@ public class EmployeeResponse {
         this.role = role;
     }
 
-    // Getter & Setter
     public Long getId() { return id; }
     public String getFullName() { return fullName; }
     public String getPhoneNumber() { return phoneNumber; }

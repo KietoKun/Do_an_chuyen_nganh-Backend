@@ -20,14 +20,12 @@ public class UserController {
         this.userService = userService;
     }
 
-    // --- THÊM MỚI: API LẤY THÔNG TIN ---
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()") // Đăng nhập rồi là xem được (kể cả Staff)
     public ResponseEntity<?> getProfile() {
         try {
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-            // Gọi Service lấy dữ liệu
             UserProfileResponse profile = userService.getUserProfile(currentUsername);
 
             return ResponseEntity.ok(profile);

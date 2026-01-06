@@ -13,7 +13,6 @@ public class ImageService {
 
     private final Cloudinary cloudinary;
 
-    // Inject giá trị từ application.yml vào Constructor
     public ImageService(
             @Value("${cloudinary.cloud-name}") String cloudName,
             @Value("${cloudinary.api-key}") String apiKey,
@@ -28,7 +27,6 @@ public class ImageService {
     }
 
     public String uploadImage(MultipartFile file) {
-        // ... (Code upload giữ nguyên không đổi)
         try {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
             return uploadResult.get("secure_url").toString();

@@ -1,14 +1,12 @@
 package com.pizzastore.dto;
 
 public class RegisterRequest {
-    // private String username; <--- XÓA DÒNG NÀY
     private String password;
     private String fullName;
     private String phoneNumber;
     private String address;
     private String email;
 
-    // --- Getters & Setters ---
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 

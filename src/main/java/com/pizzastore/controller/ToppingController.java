@@ -15,7 +15,7 @@ public class ToppingController {
     @Autowired
     private ToppingRepository toppingRepository;
 
-    // API Công khai: Lấy tất cả Topping để hiển thị lên Menu
+    //Lấy tất cả Topping để hiển thị lên Menu
     @GetMapping
     public ResponseEntity<List<Topping>> getAllToppings() {
         return ResponseEntity.ok(toppingRepository.findAll());

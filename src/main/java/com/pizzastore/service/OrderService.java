@@ -91,7 +91,7 @@ public class OrderService {
 
         double totalAmount = 0;
 
-        // 3. Duyệt Items để tính tiền & tạo Detail
+        //Duyệt Items để tính tiền & tạo Detail
         for (OrderRequest.CartItem item : request.getItems()) {
             DishVariant variant = dishVariantRepository.findById(item.getVariantId())
                     .orElseThrow(() -> new RuntimeException("Món/Size ID " + item.getVariantId() + " không tồn tại"));
@@ -127,10 +127,8 @@ public class OrderService {
             order.addDetail(detail);
         }
 
-        // =========================================================================
-        // [QUAN TRỌNG] 4. TRỪ KHO NGAY LẬP TỨC (HARD RESERVATION)
-        // Logic này chuyển từ approveOrder LÊN ĐÂY.
-        // =========================================================================
+
+        // TRỪ KHO NGAY LẬP TỨC (HARD RESERVATION)
         for (OrderDetail detail : order.getOrderDetails()) {
             DishVariant variant = detail.getDishVariant();
             int quantityOrdered = detail.getQuantity();
@@ -165,7 +163,7 @@ public class OrderService {
             // Check lại món còn available không
             dishService.refreshDishAvailability(variant.getDish());
         }
-        // =========================================================================
+
 
         // 5. Tính toán Coupon
         order.setTotalPrice(totalAmount);
@@ -226,7 +224,6 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin nhân viên: " + staffUsername));
         order.setHandledBy(staff);
 
-        // [LƯU Ý]: Đã xóa đoạn code trừ kho ở đây đi rồi nhé!
 
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);

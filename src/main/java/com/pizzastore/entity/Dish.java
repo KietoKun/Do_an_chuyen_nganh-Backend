@@ -31,10 +31,8 @@ public class Dish {
     @OneToMany(mappedBy = "dish", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DishVariant> variants = new ArrayList<>();
 
-    // --- CONSTRUCTORS ---
     public Dish() {}
 
-    // --- GETTERS & SETTERS ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -56,9 +54,7 @@ public class Dish {
     public List<DishVariant> getVariants() { return variants; }
     public void setVariants(List<DishVariant> variants) { this.variants = variants; }
 
-    // --- HELPER METHODS (Tiện ích) ---
 
-    // Hàm thêm nhanh một biến thể (Size)
     public void addVariant(DishVariant variant) {
         variants.add(variant);
         variant.setDish(this);

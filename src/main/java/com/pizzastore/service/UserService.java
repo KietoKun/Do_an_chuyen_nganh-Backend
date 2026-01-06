@@ -35,15 +35,7 @@ public class UserService {
         Account account = accountRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
-        // --- QUAN TRỌNG: BỎ ĐOẠN ĐỔI USERNAME ĐI ---
-        // Chúng ta KHÔNG cho phép đổi username nữa.
-        // Nếu nhân viên đổi số điện thoại, Manager phải tạo tài khoản mới hoặc dùng quy trình Admin riêng.
 
-        /* ĐOẠN NÀY BỎ HOẶC COMMENT LẠI
-        if (request.getUsername() != null && ...) {
-            account.setUsername(request.getUsername());
-        }
-        */
 
         // 2. Cập nhật thông tin cá nhân (Tên, Địa chỉ, Email...)
         if (account.getRole() == RoleName.CUSTOMER) {
@@ -62,8 +54,6 @@ public class UserService {
         response.setUsername(account.getUsername());
         response.setRole(account.getRole().name()); // Lấy Role (CUSTOMER, MANAGER...)
 
-        // 2. Kiểm tra xem là Customer hay Employee để lấy thông tin chi tiết
-        // (Giả sử bạn có quan hệ Account -> Customer và Account -> Employee)
 
         // Cách 1: Tìm trong bảng Customer trước
         java.util.Optional<Customer> customerOpt = customerRepository.findAll().stream()
@@ -99,12 +89,6 @@ public class UserService {
     }
 
     private void updateCustomerInfo(Account account, UpdateProfileRequest request) {
-        // Tìm Customer dựa trên Account ID (Logic này tùy thuộc vào cách bạn map DB)
-        // Cách đơn giản nhất: Query Customer có account_id = account.getId()
-        // Giả sử bạn đã có hàm tìm kiếm này, hoặc Account có link sang Customer (OneToOne mappedBy)
-
-        // *Lưu ý*: Để đơn giản, ta tìm Customer theo Account
-        // Bạn cần thêm hàm findByAccount trong CustomerRepository nếu chưa có
         Customer customer = customerRepository.findAll().stream()
                 .filter(c -> c.getAccount().getId().equals(account.getId()))
                 .findFirst()
@@ -120,7 +104,6 @@ public class UserService {
 
     private void updateEmployeeInfo(Account account, UpdateProfileRequest request) {
         // Tìm Employee dựa trên Account
-        // (Lưu ý: Vì Employee giờ kế thừa Person, bạn có thể phải tìm trong EmployeeRepository)
         Employee employee = employeeRepository.findAll().stream()
                 .filter(e -> e.getAccount().getId().equals(account.getId()))
                 .findFirst()
@@ -129,12 +112,6 @@ public class UserService {
         // Chỉ cho phép sửa Tên
         if (request.getFullName() != null) employee.setFullName(request.getFullName());
 
-        // --- CÒN SỐ ĐIỆN THOẠI THÌ SAO? ---
-        // Vì SĐT giờ gắn liền với Username (để đăng nhập),
-        // nên nếu bạn cho đổi SĐT ở đây -> Bạn phải code thêm logic cập nhật lại username bên bảng Account.
-        // Nhưng theo yêu cầu "không cho đổi", ta sẽ COMMENT dòng này lại:
-
-        // if (request.getPhoneNumber() != null) employee.setPhoneNumber(request.getPhoneNumber());
 
         employeeRepository.save(employee);
     }

@@ -24,7 +24,7 @@ public class DishService {
         this.dishVariantRepository = dishVariantRepository;
     }
 
-    // 1. LẤY MENU
+
     public List<MenuResponse> getMenu() {
         List<Dish> dishes = dishRepository.findByIsAvailableTrue();
         return dishes.stream().map(dish -> {
@@ -42,7 +42,6 @@ public class DishService {
         }).collect(Collectors.toList());
     }
 
-    // 2. TÍNH SỐ LƯỢNG TỐI ĐA
     public int calculateMaxQuantity(DishVariant variant) {
         if (variant.getRecipes().isEmpty()) return 999;
         int maxCanCook = Integer.MAX_VALUE;
@@ -54,15 +53,13 @@ public class DishService {
         }
         return maxCanCook;
     }
-    // --- 3. THÊM HÀM LẤY CÔNG THỨC THEO VARIANT ID ---
     public List<Recipe> getRecipeByVariantId(Long variantId) {
         DishVariant variant = dishVariantRepository.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Size/Biến thể không tồn tại!"));
 
-        // Trả về danh sách công thức của đúng cái Size đó
         return variant.getRecipes();
     }
-    // 3. CÁC HÀM KHÁC
+
     public Dish getDishById(Long id) {
         return dishRepository.findById(id).orElseThrow(() -> new RuntimeException("Món không tồn tại"));
     }
@@ -82,7 +79,6 @@ public class DishService {
             refreshDishAvailability(dish);
         }
     }
-    // 4. CẬP NHẬT TRẠNG THÁI (Auto-update)
     @Transactional
     public void refreshDishAvailability(Dish dish) {
         boolean isAtLeastOneVariantAvailable = false;

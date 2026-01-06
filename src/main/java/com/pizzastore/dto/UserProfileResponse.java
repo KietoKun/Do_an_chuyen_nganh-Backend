@@ -8,13 +8,12 @@ public class UserProfileResponse {
     private String fullName;
     private String email;
     private String phoneNumber;
-    private String address; // Dành cho Customer
+    private String address;
     private String role;
 
-    // Constructor, Getter, Setter
     public UserProfileResponse() {}
 
-    // Constructor full field
+
     public UserProfileResponse(Long id, String username, String fullName, String email, String phoneNumber, String address, String role) {
         this.id = id;
         this.username = username;

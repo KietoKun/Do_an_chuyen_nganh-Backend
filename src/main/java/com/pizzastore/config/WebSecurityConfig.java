@@ -15,7 +15,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-// --- IMPORT QUAN TRỌNG CHO CORS ---
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -62,11 +61,11 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/api/auth/**").permitAll()
-                                .requestMatchers("/api/dishes/**", "/api/toppings/**").permitAll() // Cho phép xem món
+                                .requestMatchers("/api/dishes/**", "/api/toppings/**").permitAll()
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                                 .requestMatchers("/api/payment/**").permitAll()
-                                .requestMatchers("/api/coupons/public").permitAll() // Ai cũng xem được danh sách mã
-                                .requestMatchers("/api/coupons/check").permitAll()  // (Nếu có) Cho phép khách kiểm tra mã
+                                .requestMatchers("/api/coupons/public").permitAll()
+                                .requestMatchers("/api/coupons/check").permitAll()
                                 .anyRequest().authenticated()
                 );
 
@@ -76,25 +75,19 @@ public class WebSecurityConfig {
         return http.build();
     }
 
-    // 2. CẤU HÌNH CHI TIẾT CORS (Cho phép ai, cái gì)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Cho phép tất cả các domain (FE nào cũng gọi được)
-        // Khi deploy thật, bạn có thể đổi "*" thành "http://localhost:3000" để an toàn hơn
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000",  // Cho FE cũ
-                "http://localhost:5173" // Cho FE mới
+                "http://localhost:3000",
+                "http://localhost:5173"
         ));
 
-        // Cho phép các method HTTP
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
-        // Cho phép các Header (Quan trọng nhất là Authorization để gửi Token)
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "x-auth-token"));
 
-        // Đăng ký cấu hình này cho tất cả các đường dẫn API
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

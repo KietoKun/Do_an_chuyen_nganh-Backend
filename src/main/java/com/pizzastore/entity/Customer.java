@@ -19,10 +19,9 @@ public class Customer {
     @JoinColumn(name = "account_id", referencedColumnName = "id")
     private Account account;
 
-    // --- CONSTRUCTOR ---
+
     public Customer() {}
 
-    // --- GETTERS & SETTERS (Thủ công) ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

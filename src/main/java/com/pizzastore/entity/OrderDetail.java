@@ -10,9 +10,8 @@ public class OrderDetail {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- THAY ĐỔI QUAN TRỌNG: Dùng DishVariant thay vì Dish ---
     @ManyToOne
-    @JoinColumn(name = "variant_id") // Đổi tên cột trong DB thành variant_id
+    @JoinColumn(name = "variant_id")
     private DishVariant dishVariant;
 
     private Double unitPrice;
@@ -32,15 +31,12 @@ public class OrderDetail {
     )
     private java.util.List<Topping> toppings = new java.util.ArrayList<>();
 
-    // --- CONSTRUCTOR ---
     public OrderDetail() {}
 
-    // --- GETTERS & SETTERS (Cần cập nhật phần này) ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    // Getter/Setter cho DishVariant (Service đang báo lỗi vì thiếu cái này)
     public DishVariant getDishVariant() {
         return dishVariant;
     }

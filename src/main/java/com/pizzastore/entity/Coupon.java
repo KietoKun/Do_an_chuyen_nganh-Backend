@@ -12,41 +12,36 @@ public class Coupon {
     private Long id;
 
     @Column(unique = true, nullable = false, length = 20)
-    private String code;            // Mã giảm giá (VD: WELCOME)
+    private String code;
 
     @Column(name = "discount_percent")
-    private Double discountPercent; // Giảm theo % (VD: 10.0)
+    private Double discountPercent;
 
     @Column(name = "discount_amount")
-    private Double discountAmount;  // Giảm theo tiền mặt (VD: 50000.0)
+    private Double discountAmount;
 
-    // [MỚI] Quan trọng để tránh lỗ vốn khi giảm %
     @Column(name = "max_discount_amount")
     private Double maxDiscountAmount;
 
     @Column(name = "expiration_date")
-    private LocalDate expirationDate; // Ngày hết hạn
+    private LocalDate expirationDate;
 
     @Column(name = "min_order_amount")
-    private Double minOrderAmount;    // Giá trị đơn tối thiểu để dùng mã
+    private Double minOrderAmount;
 
     @Column(name = "usage_limit")
-    private Integer usageLimit;       // Giới hạn số lần dùng toàn server
+    private Integer usageLimit;
 
     @Column(name = "usage_count")
-    private Integer usageCount = 0;   // Số lần đã dùng
+    private Integer usageCount = 0;
 
     @Column(name = "active")
-    private boolean active = true;    // Trạng thái kích hoạt
+    private boolean active = true;
 
-    // ==========================================
-    // 1. CONSTRUCTORS
-    // ==========================================
 
     public Coupon() {
     }
 
-    // Constructor đầy đủ (bao gồm cả maxDiscountAmount)
     public Coupon(Long id, String code, Double discountPercent, Double discountAmount, Double maxDiscountAmount,
                   LocalDate expirationDate, Double minOrderAmount,
                   Integer usageLimit, Integer usageCount, boolean active) {
@@ -62,9 +57,6 @@ public class Coupon {
         this.active = active;
     }
 
-    // ==========================================
-    // 2. GETTER & SETTER (Thủ công)
-    // ==========================================
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

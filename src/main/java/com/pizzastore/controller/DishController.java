@@ -1,6 +1,6 @@
 package com.pizzastore.controller;
 
-import com.pizzastore.dto.MenuResponse; // Import DTO mới
+import com.pizzastore.dto.MenuResponse;
 import com.pizzastore.entity.Dish;
 import com.pizzastore.entity.Recipe;
 import com.pizzastore.service.DishService;
@@ -23,8 +23,6 @@ public class DishController {
     }
 
     // --- 1. XEM MENU (PUBLIC) ---
-    // Sửa kiểu trả về: List<Dish> -> List<MenuResponse>
-    // Sửa tên hàm gọi: getActiveDishes() -> getMenu()
     @GetMapping
     public ResponseEntity<List<MenuResponse>> getMenu() {
         return ResponseEntity.ok(dishService.getMenu());
@@ -66,10 +64,4 @@ public class DishController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
-    // --- CÁC HÀM CŨ ĐÃ BỊ LOẠI BỎ (updateDish, getDishRecipe) ---
-    // Vì cấu trúc Dish thay đổi lớn (Price/Recipe sang Variant),
-    // các hàm update cũ không còn chạy được nữa.
-    // Tạm thời chúng ta chỉ hỗ trợ Thêm (Add) và Xem (Get) trước.
-    // Nếu muốn Update, cần viết lại logic phức tạp hơn (Update Variant).
 }

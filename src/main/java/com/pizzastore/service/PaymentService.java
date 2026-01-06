@@ -33,7 +33,6 @@ public class PaymentService {
     }
 
     // --- 1. TẠO URL THANH TOÁN (CẬP NHẬT: Lấy tiền từ DB) ---
-    // Bỏ tham số 'amount' ở đầu vào, chỉ cần orderId
     public String createVnPayPayment(HttpServletRequest request, Long orderId) {
 
         // Bước 1: Tìm đơn hàng trong Database
@@ -41,7 +40,6 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại!"));
 
         // Bước 2: Lấy tổng tiền từ đơn hàng (Nhân 100 theo yêu cầu của VNPAY)
-        // Ví dụ: 100,000 VNĐ -> 10,000,000
         long amount = (long) (order.getTotalPrice() * 100);
 
         // Bước 3: Tạo tham số gửi sang VNPAY
@@ -52,7 +50,7 @@ public class PaymentService {
         vnp_Params.put("vnp_Amount", String.valueOf(amount));
         vnp_Params.put("vnp_CurrCode", "VND");
 
-        // Mã giao dịch: OrderId + Random (để tránh trùng lặp nếu thanh toán lại)
+        // Mã giao dịch: OrderId + Random
         String vnp_TxnRef = orderId + "_" + VnPayConfig.getRandomNumber(4);
         vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
 

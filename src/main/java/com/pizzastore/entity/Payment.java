@@ -13,7 +13,6 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Một đơn hàng chỉ có 1 thanh toán (trong mô hình đơn giản)
     @OneToOne
     @JoinColumn(name = "order_id")
     @JsonIgnore
@@ -21,7 +20,7 @@ public class Payment {
 
     private LocalDateTime paymentTime;
 
-    private Double amount; // Số tiền thanh toán
+    private Double amount;
 
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
@@ -29,12 +28,10 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
-    private String transactionCode; // Mã giao dịch của VNPAY trả về (để đối soát)
+    private String transactionCode;
 
-    // --- Constructor, Getter, Setter ---
     public Payment() {}
 
-    // (Bạn tự generate Getter/Setter nhé)
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Order getOrder() { return order; }

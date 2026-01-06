@@ -17,15 +17,12 @@ public class Category {
     @JsonIgnore
     private List<Dish> dishes;
 
-    // --- 1. CONSTRUCTOR RỖNG (Bắt buộc) ---
     public Category() {}
 
-    // --- 2. CONSTRUCTOR CÓ THAM SỐ (Cái bạn đang thiếu) ---
     public Category(String name) {
         this.name = name;
     }
 
-    // --- GETTER & SETTER ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }

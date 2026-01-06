@@ -17,7 +17,6 @@ public class CustomerResponse {
         this.username = username;
     }
 
-    // Getters
     public Long getId() { return id; }
     public String getFullName() { return fullName; }
     public String getPhoneNumber() { return phoneNumber; }

@@ -1,7 +1,7 @@
 package com.pizzastore.controller;
 
 import com.pizzastore.dto.CreateEmployeeRequest;
-import com.pizzastore.dto.EmployeeResponse; // Đảm bảo đã import DTO này
+import com.pizzastore.dto.EmployeeResponse;
 import com.pizzastore.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +21,7 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // --- 1. TẠO NHÂN VIÊN (POST) ---
+    //1. TẠO NHÂN VIÊN (POST)
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')") // Chỉ Manager được tạo
     public ResponseEntity<?> createNewEmployee(@RequestBody CreateEmployeeRequest request) {
@@ -38,14 +38,14 @@ public class EmployeeController {
         }
     }
 
-    // --- 2. LẤY DANH SÁCH (GET) - BẠN ĐANG THIẾU CÁI NÀY ---
+    //2. LẤY DANH SÁCH (GET)
     @GetMapping
     @PreAuthorize("hasRole('MANAGER')") // Chỉ Manager được xem
     public ResponseEntity<List<EmployeeResponse>> getAllEmployees() {
         return ResponseEntity.ok(employeeService.getAllEmployees());
     }
 
-    // --- 3. XÓA NHÂN VIÊN (DELETE) - BẠN ĐANG THIẾU CÁI NÀY ---
+    //3. XÓA NHÂN VIÊN (DELETE)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('MANAGER')") // Chỉ Manager được xóa
     public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
@@ -56,7 +56,7 @@ public class EmployeeController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    // --- 4. XEM CHI TIẾT 1 NHÂN VIÊN ---
+    //4. XEM CHI TIẾT 1 NHÂN VIÊN
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('MANAGER')") // Chỉ Manager được xem
     public ResponseEntity<?> getEmployeeById(@PathVariable Long id) {
