@@ -1,6 +1,7 @@
 package com.pizzastore.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,4 +55,9 @@ public class DishVariant {
 
     public List<Recipe> getRecipes() { return recipes; }
     public void setRecipes(List<Recipe> recipes) { this.recipes = recipes; }
+
+    @JsonProperty("dishName")
+    public String getDishName() {
+        return dish != null ? dish.getName() : null;
+    }
 }

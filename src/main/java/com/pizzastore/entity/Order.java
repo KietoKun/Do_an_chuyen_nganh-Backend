@@ -15,6 +15,9 @@ public class Order {
     private Long id;
 
     private LocalDateTime orderTime;
+    private LocalDateTime acceptedAt;
+    private LocalDateTime cookingStartedAt;
+    private LocalDateTime completedAt;
 
     // Tổng tiền gốc (Chưa giảm giá)
     private Double totalPrice;
@@ -47,6 +50,14 @@ public class Order {
     @JoinColumn(name = "employee_id", nullable = true)
     private Employee handledBy;
 
+    @ManyToOne
+    @JoinColumn(name = "chef_id", nullable = true)
+    private Employee cookedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch; // Chi nhánh xử lý đơn hàng này
+
     public Order() {}
 
 
@@ -61,6 +72,15 @@ public class Order {
 
     public LocalDateTime getOrderTime() { return orderTime; }
     public void setOrderTime(LocalDateTime orderTime) { this.orderTime = orderTime; }
+
+    public LocalDateTime getAcceptedAt() { return acceptedAt; }
+    public void setAcceptedAt(LocalDateTime acceptedAt) { this.acceptedAt = acceptedAt; }
+
+    public LocalDateTime getCookingStartedAt() { return cookingStartedAt; }
+    public void setCookingStartedAt(LocalDateTime cookingStartedAt) { this.cookingStartedAt = cookingStartedAt; }
+
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
 
     public Double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
@@ -111,4 +131,10 @@ public class Order {
 
     public Employee getHandledBy() { return handledBy; }
     public void setHandledBy(Employee handledBy) { this.handledBy = handledBy; }
+
+    public Employee getCookedBy() { return cookedBy; }
+    public void setCookedBy(Employee cookedBy) { this.cookedBy = cookedBy; }
+
+    public Branch getBranch() { return branch; }
+    public void setBranch(Branch branch) { this.branch = branch; }
 }

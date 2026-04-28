@@ -21,8 +21,13 @@ public class OrderRequest {
     @Schema(description = "Mã giảm giá", example = "SUMMER2024")
     private String couponCode;
 
-    public static class CartItem {
+    @Schema(description = "Vĩ độ của khách hàng (Dùng để tìm chi nhánh)", example = "10.7731")
+    private Double customerLat;
 
+    @Schema(description = "Kinh độ của khách hàng (Dùng để tìm chi nhánh)", example = "106.6596")
+    private Double customerLng;
+
+    public static class CartItem {
         @Schema(description = "ID của biến thể sản phẩm (Size M/L...)", example = "10")
         private Long variantId;
 
@@ -42,7 +47,7 @@ public class OrderRequest {
         public void setToppingIds(List<Long> toppingIds) { this.toppingIds = toppingIds; }
     }
 
-
+    // Getters and Setters hiện tại
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
 
@@ -57,4 +62,11 @@ public class OrderRequest {
 
     public String getCouponCode() { return couponCode; }
     public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
+
+    // --- THÊM GETTER & SETTER CHO TỌA ĐỘ ---
+    public Double getCustomerLat() { return customerLat; }
+    public void setCustomerLat(Double customerLat) { this.customerLat = customerLat; }
+
+    public Double getCustomerLng() { return customerLng; }
+    public void setCustomerLng(Double customerLng) { this.customerLng = customerLng; }
 }

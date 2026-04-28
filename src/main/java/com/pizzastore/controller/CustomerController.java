@@ -2,6 +2,8 @@ package com.pizzastore.controller;
 
 import com.pizzastore.dto.CustomerResponse;
 import com.pizzastore.service.CustomerService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/customers")
+@Tag(name = "5. Quản lý Khách hàng (Customer)", description = "API tra cứu và quản lý thông tin khách hàng dành cho nội bộ")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -20,15 +23,16 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    // 1. GET ALL: Dành cho Manager và Staff (để tra cứu khách)
     @GetMapping
-    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER', 'STAFF')")
+    @Operation(summary = "Lấy danh sách Khách hàng", description = "Nhân viên và Quản lý dùng để xem toàn bộ danh sách khách hàng đã đăng ký.")
     public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
         return ResponseEntity.ok(customerService.getAllCustomers());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER', 'STAFF')")
+    @Operation(summary = "Xem chi tiết 1 Khách hàng", description = "Tìm kiếm thông tin khách hàng dựa trên ID.")
     public ResponseEntity<?> getCustomerById(@PathVariable Long id) {
         try {
             CustomerResponse customer = customerService.getCustomerById(id);
@@ -38,9 +42,9 @@ public class CustomerController {
         }
     }
 
-    // 2. DELETE: Chỉ dành cho Manager (quyền cao nhất)
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER')")
+    @Operation(summary = "Xóa Khách hàng", description = "Chỉ Manager mới có quyền xóa dữ liệu khách hàng khỏi hệ thống.")
     public ResponseEntity<?> deleteCustomer(@PathVariable Long id) {
         try {
             customerService.deleteCustomer(id);

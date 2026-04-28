@@ -4,7 +4,7 @@
 server:
   port: 8080
   servlet:
-    context-path: /  # Đường dẫn gốc (VD: http://localhost:8080/)
+    context-path: /
 
 # ==============================================================
 # 2. SPRING CONFIGURATION
@@ -25,23 +25,40 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-  # --- FILE UPLOAD (Chuẩn bị cho việc up ảnh món ăn) ---
   servlet:
     multipart:
-      max-file-size: 10MB      # Giới hạn 1 file
-      max-request-size: 10MB   # Giới hạn tổng request
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 # ==============================================================
-# 3. APP CUSTOM CONFIGURATION (JWT)
+# 3. APP CUSTOM CONFIGURATION
 # ==============================================================
 app:
-  # Chuỗi bí mật để mã hóa Token.
-  # (Đây là chuỗi Hex 512-bit mẫu, bạn có thể giữ nguyên hoặc random lại)
   jwtSecret: ${JWT_SECRET}
-
-  # Thời gian hết hạn Token (tính bằng mili-giây)
-  # 86400000 ms = 24 giờ
-  jwtExpirationMs: 86400000
+  jwtExpirationMs: ${JWT_EXPIRATION_MS:300000}
+  refreshTokenExpirationMs: ${REFRESH_TOKEN_EXPIRATION_MS:604800000}
+  registration:
+    otp:
+      expiration-minutes: ${REGISTRATION_OTP_EXPIRATION_MINUTES:5}
+      resend-cooldown-seconds: ${REGISTRATION_OTP_RESEND_COOLDOWN_SECONDS:60}
+    mail:
+      enabled: ${REGISTRATION_MAIL_ENABLED:false}
+  inventory:
+    expiry-alert-days: ${INVENTORY_EXPIRY_ALERT_DAYS:2}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}
@@ -55,6 +72,10 @@ payment:
     tmn-code: ${VNPAY_TMN_CODE}
     hash-secret: ${VNPAY_HASH_SECRET}
     return-url: ${VNPAY_RETURN_URL}
+
+goong:
+  api:
+    key: ${GOONG_API_KEY}
 
 frontend:
   url: "http://localhost:5173"

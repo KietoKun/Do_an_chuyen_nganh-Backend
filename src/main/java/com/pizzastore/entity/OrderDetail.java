@@ -3,6 +3,9 @@ package com.pizzastore.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "order_details")
 public class OrderDetail {
@@ -29,7 +32,11 @@ public class OrderDetail {
             joinColumns = @JoinColumn(name = "order_detail_id"),
             inverseJoinColumns = @JoinColumn(name = "topping_id")
     )
-    private java.util.List<Topping> toppings = new java.util.ArrayList<>();
+    private List<Topping> toppings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "orderDetail", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<InventoryBatchConsumption> batchConsumptions = new ArrayList<>();
 
     public OrderDetail() {}
 
@@ -54,8 +61,16 @@ public class OrderDetail {
     public Order getOrder() { return order; }
     public void setOrder(Order order) { this.order = order; }
 
-    public java.util.List<Topping> getToppings() { return toppings; }
-    public void setToppings(java.util.List<Topping> toppings) { this.toppings = toppings; }
+    public List<Topping> getToppings() { return toppings; }
+    public void setToppings(List<Topping> toppings) { this.toppings = toppings; }
+
+    public List<InventoryBatchConsumption> getBatchConsumptions() { return batchConsumptions; }
+    public void setBatchConsumptions(List<InventoryBatchConsumption> batchConsumptions) { this.batchConsumptions = batchConsumptions; }
+
+    public void addBatchConsumption(InventoryBatchConsumption consumption) {
+        batchConsumptions.add(consumption);
+        consumption.setOrderDetail(this);
+    }
 
     public void setUnitPrice(Double unitPrice) {
         this.unitPrice = unitPrice;

@@ -28,7 +28,7 @@ public class OpenApiConfig {
                 // 2. Cấu hình danh sách Server
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Server Local"),
-                        new Server().url("http://160.191.242.181:8080").description("Server VPS (Production)")
+                        new Server().url("http://160.187.229.174:8080").description("Server VPS (Production)")
                 ))
 
                 // 3. Thiết lập bảo mật (Bearer Token)

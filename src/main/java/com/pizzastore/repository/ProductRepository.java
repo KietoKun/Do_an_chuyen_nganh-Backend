@@ -1,21 +1,19 @@
 package com.pizzastore.repository;
 
-import com.pizzastore.entity.Product; // <--- 1. Import Entity
-import org.springframework.data.jpa.repository.JpaRepository; // <--- 2. Import JpaRepository
-import org.springframework.stereotype.Repository; // <--- 3. Import Annotation
+import com.pizzastore.entity.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import java.util.List; // (Tùy chọn) Nếu bạn muốn dùng List
+import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // --- CÁC HÀM TÙY CHỌN (Gợi ý thêm) ---
-
-    // Tìm nguyên liệu theo tên (Ví dụ để check trùng tên khi nhập kho)
+    // Tìm nguyên liệu theo tên (Ví dụ để check trùng tên khi thêm nguyên liệu mới)
     boolean existsByName(String name);
 
-    // Tìm các nguyên liệu sắp hết hàng (Ví dụ: Tồn kho < 10)
-    List<Product> findByStockQuantityLessThan(Double quantity);
+    // ĐÃ XÓA/COMMENT HÀM DƯỚI ĐÂY VÌ BẢNG PRODUCT KHÔNG CÒN CỘT STOCK_QUANTITY NỮA
+    // List<Product> findByStockQuantityLessThan(Double quantity);
 
     Product findByName(String name);
 }

@@ -1,8 +1,10 @@
 package com.pizzastore.controller;
 
 import com.pizzastore.dto.UpdateProfileRequest;
-import com.pizzastore.dto.UserProfileResponse; // Import DTO mới
+import com.pizzastore.dto.UserProfileResponse;
 import com.pizzastore.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "11. Thông tin Cá nhân (User Profile)", description = "API quản lý hồ sơ cá nhân của người dùng đang đăng nhập (áp dụng cho cả Khách hàng và Nhân viên)")
 public class UserController {
 
     private final UserService userService;
@@ -21,7 +24,8 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("isAuthenticated()") // Đăng nhập rồi là xem được (kể cả Staff)
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Xem hồ sơ cá nhân", description = "Hệ thống tự động đọc JWT Token để nhận diện người dùng hiện tại và trả về thông tin hồ sơ (Tên, SĐT, Email, Địa chỉ...).")
     public ResponseEntity<?> getProfile() {
         try {
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -34,9 +38,9 @@ public class UserController {
         }
     }
 
-    // API: Cập nhật hồ sơ (CŨ - GIỮ NGUYÊN)
     @PutMapping("/profile")
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Cập nhật hồ sơ cá nhân", description = "Cho phép người dùng đang đăng nhập tự sửa đổi thông tin cá nhân của mình.")
     public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request) {
         try {
             String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();

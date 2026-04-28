@@ -4,6 +4,8 @@ import com.pizzastore.entity.Coupon;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,4 +24,9 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
     // Dùng Optional an toàn hơn để tránh NullPointerException
     Optional<Coupon> findByCode(String code);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Coupon c SET c.active = false WHERE c.active = true AND c.expirationDate < CURRENT_DATE")
+    int deactivateExpiredCoupons();
 }

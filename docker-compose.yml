@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    container_name: pizza_db_container
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      network: host
+    container_name: pizza_backend_container
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/userdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+      APP_JWTSECRET: ${JWT_SECRET}
+      APP_JWTEXPIRATIONMS: ${JWT_EXPIRATION_MS:-300000}
+      APP_REFRESHTOKENEXPIRATIONMS: ${REFRESH_TOKEN_EXPIRATION_MS:-604800000}
+
+      APP_REGISTRATION_MAIL_ENABLED: ${REGISTRATION_MAIL_ENABLED:-false}
+      APP_REGISTRATION_OTP_EXPIRATION_MINUTES: ${REGISTRATION_OTP_EXPIRATION_MINUTES:-5}
+      APP_REGISTRATION_OTP_RESEND_COOLDOWN_SECONDS: ${REGISTRATION_OTP_RESEND_COOLDOWN_SECONDS:-60}
+      APP_INVENTORY_EXPIRY_ALERT_DAYS: ${INVENTORY_EXPIRY_ALERT_DAYS:-2}
+
+      SPRING_MAIL_HOST: ${MAIL_HOST}
+      SPRING_MAIL_PORT: ${MAIL_PORT}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+      SPRING_MAIL_PROTOCOL: smtp
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "true"
+
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      GOONG_API_KEY: ${GOONG_API_KEY}
+
+      PAYMENT_VNPAY_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      PAYMENT_VNPAY_RETURN_URL: ${VNPAY_RETURN_URL}
+      PAYMENT_VNPAY_TMN_CODE: ${VNPAY_TMN_CODE}
+      PAYMENT_VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET}
+      PAYMENT_VNPAY_API_URL: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+
+volumes:
+  db_data:

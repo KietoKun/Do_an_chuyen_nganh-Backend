@@ -1,6 +1,7 @@
 package com.pizzastore.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,7 +12,11 @@ public class Employee extends Person {
     private String position;
     private Double salaryPerHour;
     private LocalDateTime lastCheckIn;
+    private LocalDate dateOfBirth;
     private String email;
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
 
     public Employee() {
         super(); // Gọi constructor của cha
@@ -40,6 +45,12 @@ public class Employee extends Person {
     public LocalDateTime getLastCheckIn() { return lastCheckIn; }
     public void setLastCheckIn(LocalDateTime lastCheckIn) { this.lastCheckIn = lastCheckIn; }
 
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public Branch getBranch() { return branch; }
+    public void setBranch(Branch branch) { this.branch = branch; }
 }
