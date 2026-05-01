@@ -20,4 +20,5 @@ jobs:
           script: |
             cd /root/Backend
             git pull origin main
-            docker-compose up -d --build
+            docker-compose up -d db
+            docker-compose up -d --build backend
