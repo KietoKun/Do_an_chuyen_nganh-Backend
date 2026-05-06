@@ -13,14 +13,6 @@ services:
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
       - ./nginx/certs:/etc/nginx/certs
-    command: >
-      sh -c "if [ ! -f /etc/nginx/certs/fullchain.pem ] || [ ! -f /etc/nginx/certs/privkey.pem ]; then
-      openssl req -x509 -nodes -newkey rsa:2048 -days 365
-      -keyout /etc/nginx/certs/privkey.pem
-      -out /etc/nginx/certs/fullchain.pem
-      -subj '/CN=${SERVER_NAME:-localhost}';
-      fi;
-      nginx -g 'daemon off;'"
 
   db:
     image: postgres:15

@@ -40,3 +40,6 @@ build/
 .idea/
 
 .env
+
+nginx/certs/*
+!nginx/certs/.gitkeep
