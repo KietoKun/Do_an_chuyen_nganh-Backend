@@ -1,8 +1,9 @@
-package com.pizzastore.service;
+package com.pizzastore.service.unit;
 
 import com.pizzastore.entity.Account;
 import com.pizzastore.entity.RefreshToken;
 import com.pizzastore.repository.RefreshTokenRepository;
+import com.pizzastore.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

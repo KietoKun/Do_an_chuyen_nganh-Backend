@@ -1,4 +1,4 @@
-package com.pizzastore.service;
+package com.pizzastore.service.unit;
 
 import com.pizzastore.dto.RegisterOtpRequest;
 import com.pizzastore.dto.RegisterRequest;
@@ -6,6 +6,8 @@ import com.pizzastore.entity.RegistrationOtp;
 import com.pizzastore.repository.AccountRepository;
 import com.pizzastore.repository.CustomerRepository;
 import com.pizzastore.repository.RegistrationOtpRepository;
+import com.pizzastore.service.EmailService;
+import com.pizzastore.service.RegistrationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
