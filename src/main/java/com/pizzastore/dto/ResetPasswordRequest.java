@@ -6,8 +6,8 @@ public class ResetPasswordRequest {
     @Schema(description = "Username dang nhap, hien tai thuong la so dien thoai", example = "0901234567")
     private String username;
 
-    @Schema(description = "Ma OTP nhan duoc qua email", example = "123456")
-    private String otpCode;
+    @Schema(description = "Reset token tra ve sau khi xac thuc OTP thanh cong", example = "Yxj4OEU0vO1ReFnd0xJ5DoL4M_4CHwvf")
+    private String resetToken;
 
     @Schema(description = "Mat khau moi", example = "NewPassword@123")
     private String newPassword;
@@ -20,12 +20,12 @@ public class ResetPasswordRequest {
         this.username = username;
     }
 
-    public String getOtpCode() {
-        return otpCode;
+    public String getResetToken() {
+        return resetToken;
     }
 
-    public void setOtpCode(String otpCode) {
-        this.otpCode = otpCode;
+    public void setResetToken(String resetToken) {
+        this.resetToken = resetToken;
     }
 
     public String getNewPassword() {

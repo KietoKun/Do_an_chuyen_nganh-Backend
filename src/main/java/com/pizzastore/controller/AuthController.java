@@ -3,9 +3,11 @@ package com.pizzastore.controller;
 import com.pizzastore.dto.ApiMessageResponse;
 import com.pizzastore.dto.ChangePasswordRequest;
 import com.pizzastore.dto.ForgotPasswordRequest;
+import com.pizzastore.dto.PasswordResetTokenResponse;
 import com.pizzastore.dto.RegisterOtpRequest;
 import com.pizzastore.dto.RegisterRequest;
 import com.pizzastore.dto.ResetPasswordRequest;
+import com.pizzastore.dto.VerifyPasswordResetOtpRequest;
 import com.pizzastore.entity.Account;
 import com.pizzastore.entity.Branch;
 import com.pizzastore.entity.Customer;
@@ -337,17 +339,39 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/forgot-password/verify-otp")
+    @Operation(
+            summary = "Quen mat khau - Xac thuc OTP",
+            description = """
+                    Frontend gui username/so dien thoai va ma OTP.
+                    Neu OTP hop le, he thong tra ve resetToken de dung o buoc tao mat khau moi.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Xac thuc OTP thanh cong"),
+            @ApiResponse(responseCode = "400", description = "OTP sai, het han hoac da dung")
+    })
+    public ResponseEntity<?> verifyForgotPasswordOtp(@RequestBody VerifyPasswordResetOtpRequest request) {
+        try {
+            String resetToken = passwordResetService.verifyResetOtp(request);
+            return ResponseEntity.ok(new PasswordResetTokenResponse(resetToken));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(new ApiMessageResponse(e.getReason()));
+        }
+    }
+
     @PostMapping("/forgot-password/reset")
     @Operation(
-            summary = "Quen mat khau - Xac thuc OTP va tao mat khau moi",
+            summary = "Quen mat khau - Tao mat khau moi",
             description = """
-                    Frontend gui username/so dien thoai, ma OTP va mat khau moi.
+                    Frontend gui username/so dien thoai, resetToken tu buoc xac thuc OTP va mat khau moi.
                     Mat khau moi khong duoc trung voi mat khau cu.
                     """
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Dat lai mat khau thanh cong"),
-            @ApiResponse(responseCode = "400", description = "OTP sai, het han, da dung hoac mat khau moi trung mat khau cu")
+            @ApiResponse(responseCode = "400", description = "Token khong hop le, het han, da dung hoac mat khau moi trung mat khau cu")
     })
     public ResponseEntity<?> resetForgotPassword(@RequestBody ResetPasswordRequest request) {
         try {

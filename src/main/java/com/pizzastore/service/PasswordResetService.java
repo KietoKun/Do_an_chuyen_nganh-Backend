@@ -2,6 +2,7 @@ package com.pizzastore.service;
 
 import com.pizzastore.dto.ForgotPasswordRequest;
 import com.pizzastore.dto.ResetPasswordRequest;
+import com.pizzastore.dto.VerifyPasswordResetOtpRequest;
 import com.pizzastore.entity.Account;
 import com.pizzastore.entity.Customer;
 import com.pizzastore.entity.Employee;
@@ -20,10 +21,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 
 @Service
 public class PasswordResetService {
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String OTP_HASH_PREFIX = "OTP:";
+    private static final String RESET_TOKEN_HASH_PREFIX = "RESET:";
 
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
@@ -87,7 +91,7 @@ public class PasswordResetService {
                 .orElseGet(PasswordResetOtp::new);
         otp.setUsername(username);
         otp.setEmail(recipient.email());
-        otp.setOtpHash(passwordEncoder.encode(otpCode));
+        otp.setOtpHash(OTP_HASH_PREFIX + passwordEncoder.encode(otpCode));
         otp.setLastSentAt(LocalDateTime.now());
         otp.setExpiresAt(LocalDateTime.now().plusMinutes(otpExpirationMinutes));
         otp.setCreatedAt(otp.getCreatedAt() == null ? LocalDateTime.now() : otp.getCreatedAt());
@@ -96,27 +100,37 @@ public class PasswordResetService {
     }
 
     @Transactional
-    public void resetPassword(ResetPasswordRequest request) {
+    public String verifyResetOtp(VerifyPasswordResetOtpRequest request) {
         String username = normalizeUsername(request == null ? null : request.getUsername());
         String otpCode = requireNotBlank(request == null ? null : request.getOtpCode(), "Vui lòng nhập mã xác thực.");
+
+        accountRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tài khoản không tồn tại."));
+
+        PasswordResetOtp otp = getUsablePasswordResetOtp(username);
+        if (!isOtpHash(otp) || !passwordEncoder.matches(otpCode, withoutPrefix(otp.getOtpHash(), OTP_HASH_PREFIX))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác thực không chính xác.");
+        }
+
+        String resetToken = generateResetToken();
+        otp.setOtpHash(RESET_TOKEN_HASH_PREFIX + passwordEncoder.encode(resetToken));
+        passwordResetOtpRepository.save(otp);
+        return resetToken;
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String username = normalizeUsername(request == null ? null : request.getUsername());
+        String resetToken = requireNotBlank(request == null ? null : request.getResetToken(),
+                "Vui lòng xác thực OTP trước khi đặt lại mật khẩu.");
         String newPassword = requireNotBlank(request == null ? null : request.getNewPassword(), "Vui lòng nhập mật khẩu mới.");
 
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tài khoản không tồn tại."));
 
-        PasswordResetOtp otp = passwordResetOtpRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Bạn cần yêu cầu mã xác thực trước khi đặt lại mật khẩu."));
-
-        if (otp.isUsed()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác thực đã được sử dụng.");
-        }
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
-            passwordResetOtpRepository.delete(otp);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác thực đã hết hạn.");
-        }
-        if (!passwordEncoder.matches(otpCode, otp.getOtpHash())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác thực không chính xác.");
+        PasswordResetOtp otp = getUsablePasswordResetOtp(username);
+        if (!isResetTokenHash(otp) || !passwordEncoder.matches(resetToken, withoutPrefix(otp.getOtpHash(), RESET_TOKEN_HASH_PREFIX))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phiên đặt lại mật khẩu không hợp lệ.");
         }
         if (passwordEncoder.matches(newPassword, account.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -130,6 +144,21 @@ public class PasswordResetService {
         otp.setUsed(true);
         passwordResetOtpRepository.save(otp);
         refreshTokenService.deleteByAccount(account);
+    }
+
+    private PasswordResetOtp getUsablePasswordResetOtp(String username) {
+        PasswordResetOtp otp = passwordResetOtpRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Bạn cần yêu cầu mã xác thực trước khi đặt lại mật khẩu."));
+
+        if (otp.isUsed()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác thực đã được sử dụng.");
+        }
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
+            passwordResetOtpRepository.delete(otp);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã xác thực đã hết hạn.");
+        }
+        return otp;
     }
 
     private ResetRecipient resolveRecipient(Account account) {
@@ -173,6 +202,24 @@ public class PasswordResetService {
     private String generateOtpCode() {
         int otp = 100000 + RANDOM.nextInt(900000);
         return String.valueOf(otp);
+    }
+
+    private String generateResetToken() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private boolean isOtpHash(PasswordResetOtp otp) {
+        return otp.getOtpHash() != null && otp.getOtpHash().startsWith(OTP_HASH_PREFIX);
+    }
+
+    private boolean isResetTokenHash(PasswordResetOtp otp) {
+        return otp.getOtpHash() != null && otp.getOtpHash().startsWith(RESET_TOKEN_HASH_PREFIX);
+    }
+
+    private String withoutPrefix(String value, String prefix) {
+        return value.substring(prefix.length());
     }
 
     private record ResetRecipient(String email, String fullName) {
