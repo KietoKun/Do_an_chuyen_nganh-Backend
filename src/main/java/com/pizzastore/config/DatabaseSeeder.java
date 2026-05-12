@@ -1,8 +1,11 @@
 package com.pizzastore.config;
 
 import com.pizzastore.entity.*;
+import com.pizzastore.enums.RoleName;
 import com.pizzastore.repository.*;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,16 +16,23 @@ import java.util.List;
 @Component
 public class DatabaseSeeder implements CommandLineRunner {
 
+    private static final double LOAD_TEST_INVENTORY_TARGET = 5000.0;
+
     private final ProductRepository productRepository;
     private final DishRepository dishRepository;
     private final CategoryRepository categoryRepository;
     private final ToppingRepository toppingRepository;
     private final CouponRepository couponRepository;
     private final BranchRepository branchRepository;
-    private final InventoryRepository inventoryRepository; // ĐÃ THÊM
+    private final InventoryRepository inventoryRepository;
     private final InventoryBatchRepository inventoryBatchRepository;
+    private final AccountRepository accountRepository;
+    private final CustomerRepository customerRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Value("${app.seed.load-test.enabled:false}")
+    private boolean loadTestSeedEnabled;
+
     public DatabaseSeeder(ProductRepository productRepository,
                           DishRepository dishRepository,
                           CategoryRepository categoryRepository,
@@ -30,40 +40,42 @@ public class DatabaseSeeder implements CommandLineRunner {
                           CouponRepository couponRepository,
                           BranchRepository branchRepository,
                           InventoryRepository inventoryRepository,
-                          InventoryBatchRepository inventoryBatchRepository) { // ĐÃ THÊM
+                          InventoryBatchRepository inventoryBatchRepository,
+                          AccountRepository accountRepository,
+                          CustomerRepository customerRepository,
+                          PasswordEncoder passwordEncoder) {
         this.productRepository = productRepository;
         this.dishRepository = dishRepository;
         this.categoryRepository = categoryRepository;
         this.toppingRepository = toppingRepository;
         this.couponRepository = couponRepository;
         this.branchRepository = branchRepository;
-        this.inventoryRepository = inventoryRepository; // ĐÃ THÊM
+        this.inventoryRepository = inventoryRepository;
         this.inventoryBatchRepository = inventoryBatchRepository;
+        this.accountRepository = accountRepository;
+        this.customerRepository = customerRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
-        System.out.println(">>> Bắt đầu Seeding dữ liệu (CHẾ ĐỘ MULTI-BRANCH)...");
+    public void run(String... args) {
+        System.out.println(">>> Starting seed data (multi-branch mode)...");
 
-        // 1. TẠO CHI NHÁNH
         if (branchRepository.count() == 0) {
-            System.out.println(">>> Đang tạo dữ liệu 3 Chi nhánh...");
             Branch b1 = new Branch("PizzaStore Quận 10", "268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM", 10.7731, 106.6596);
-            Branch b2 = new Branch("PizzaStore Quận 1", "15 Lê Thánh Tôn, Phường Bến Nghé, Quận 1, TP.HCM", 10.7769, 106.7009);
-            Branch b3 = new Branch("PizzaStore Thủ Đức", "Võ Văn Ngân, Phường Linh Chiểu, TP. Thủ Đức", 10.8515, 106.7585);
+            Branch b2 = new Branch("PizzaStore Quận 1", "15 Lê Thánh Tôn, Bến Nghé, Quận 1, TP.HCM", 10.7769, 106.7009);
+            Branch b3 = new Branch("PizzaStore Thủ Đức", "Võ Văn Ngân, Linh Chiểu, TP. Thủ Đức", 10.8515, 106.7585);
             branchRepository.saveAll(List.of(b1, b2, b3));
         }
 
         if (dishRepository.count() == 0) {
-            // 2. TẠO CATEGORY
             Category catPizza = categoryRepository.save(new Category("Pizza"));
             Category catPasta = categoryRepository.save(new Category("Pasta"));
             Category catAppetizer = categoryRepository.save(new Category("Khai vị"));
             Category catDrink = categoryRepository.save(new Category("Nước uống"));
             Category catDessert = categoryRepository.save(new Category("Tráng miệng"));
 
-            // 3. TẠO NGUYÊN LIỆU (Chỉ có tên và đơn vị)
             Product botMi = productRepository.save(new Product("Bột mì", "kg"));
             Product phoMai = productRepository.save(new Product("Phô mai Mozzarella", "kg"));
             Product sotCa = productRepository.save(new Product("Sốt cà chua", "lit"));
@@ -75,10 +87,8 @@ public class DatabaseSeeder implements CommandLineRunner {
             Product kem = productRepository.save(new Product("Kem tươi", "lit"));
             Product coca = productRepository.save(new Product("Coca Cola", "lon"));
 
-            // 4. CHIA KHO (Nhập số lượng cho từng chi nhánh)
             List<Branch> allBranches = branchRepository.findAll();
             for (Branch branch : allBranches) {
-                // Nhập kho cho từng chi nhánh, giả sử chi nhánh nào cũng có mức kho giống nhau để test
                 inventoryRepository.save(new Inventory(branch, botMi, 10.0));
                 inventoryRepository.save(new Inventory(branch, phoMai, 5.0));
                 inventoryRepository.save(new Inventory(branch, sotCa, 5.0));
@@ -91,7 +101,6 @@ public class DatabaseSeeder implements CommandLineRunner {
                 inventoryRepository.save(new Inventory(branch, coca, 20.0));
             }
 
-            // 5. TẠO MÓN ĂN (Giữ nguyên logic của bạn)
             createPizza(catPizza, "Pizza Hải Sản", "Tôm, mực, sốt Thousand Island",
                     "https://res.cloudinary.com/dzt7upu2d/image/upload/v1764951100/wi2qx6sktce7y4woxhmo.jpg",
                     botMi, phoMai, sotCa, tom);
@@ -108,19 +117,13 @@ public class DatabaseSeeder implements CommandLineRunner {
                     "https://res.cloudinary.com/dzt7upu2d/image/upload/v1764951262/a0vdk79maz9m2k77jc4i.jpg",
                     botMi, phoMai, sotCa, null);
 
-            createSingleItem(catPasta, "Mỳ Ý Bò Bằm", "Mỳ Ý sốt cà chua bò bằm truyền thống",
+            createSingleItem(catPasta, "Mỳ Ý Bò Băm", "Mỳ Ý sốt cà chua bò băm truyền thống",
                     "https://res.cloudinary.com/dzt7upu2d/image/upload/v1764951324/ntztks4xphxornlal1wm.jpg",
                     89000.0, myY, 0.15, boBam, 0.1);
-
-            // ... (Bạn có thể thêm lại các món khác ở đây nếu muốn, mình rút gọn cho dễ nhìn)
         }
 
-        // 6. TOPPING (Giữ nguyên)
         if (toppingRepository.count() == 0) {
             Product phoMai = productRepository.findByName("Phô mai Mozzarella");
-            Product xucXich = productRepository.findByName("Xúc xích");
-            Product botMi = productRepository.findByName("Bột mì");
-
             if (phoMai != null) {
                 Topping themPhoMai = new Topping();
                 themPhoMai.setName("Thêm Phô Mai Mozzarella");
@@ -129,10 +132,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                 themPhoMai.setQuantityNeeded(0.05);
                 toppingRepository.save(themPhoMai);
             }
-            // ... (Các Topping khác)
         }
 
-        // 7. COUPON (Giữ nguyên)
         if (couponRepository.count() == 0) {
             Coupon c1 = new Coupon();
             c1.setCode("WELCOME10");
@@ -140,31 +141,104 @@ public class DatabaseSeeder implements CommandLineRunner {
             c1.setActive(true);
             c1.setExpirationDate(LocalDate.now().plusMonths(3));
             couponRepository.save(c1);
-            // ... (Các Coupon khác)
         }
 
-        seedInventoryBatchesIfMissing();
+        if (loadTestSeedEnabled) {
+            seedLoadTestCustomers();
+            seedInventoryForLoadTesting();
+        }
     }
 
-    private void seedInventoryBatchesIfMissing() {
-        if (inventoryBatchRepository.count() > 0) {
+    private void seedLoadTestCustomers() {
+        String password = "123456";
+        for (int i = 1; i <= 100; i++) {
+            String suffix = String.format("%06d", i);
+            String phoneNumber = "0819" + suffix;
+            String email = "loadtest" + suffix + "@example.com";
+
+            Account account = accountRepository.findByUsername(phoneNumber).orElseGet(Account::new);
+            account.setUsername(phoneNumber);
+            account.setPassword(passwordEncoder.encode(password));
+            account.setRole(RoleName.CUSTOMER);
+            account.setFirstLogin(false);
+
+            Customer customer = customerRepository.findByAccount_Username(phoneNumber).orElseGet(Customer::new);
+            customer.setFullName("Load Test Customer " + suffix);
+            customer.setPhoneNumber(phoneNumber);
+            customer.setAddress("Load Test Address " + suffix);
+            customer.setEmail(email);
+            customer.setAccount(account);
+
+            customerRepository.save(customer);
+        }
+    }
+
+    private void seedInventoryForLoadTesting() {
+        List<Branch> branches = branchRepository.findAll();
+        if (branches.isEmpty()) {
             return;
         }
 
-        LocalDateTime importedAt = LocalDateTime.now();
-        LocalDate expiredAt = LocalDate.now().plusMonths(3);
-        for (Inventory inventory : inventoryRepository.findAll()) {
+        Product botMi = ensureProduct("Bột mì", "kg");
+        Product phoMai = ensureProduct("Phô mai Mozzarella", "kg");
+        Product sotCa = ensureProduct("Sốt cà chua", "lit");
+        Product tom = ensureProduct("Tôm", "kg");
+        Product muc = ensureProduct("Mực", "kg");
+        Product boBam = ensureProduct("Bò băm", "kg");
+        Product xucXich = ensureProduct("Xúc xích", "kg");
+        Product myY = ensureProduct("Mỳ Ý khô", "kg");
+        Product kem = ensureProduct("Kem tươi", "lit");
+        Product coca = ensureProduct("Coca Cola", "lon");
+
+        for (Branch branch : branches) {
+            topUpInventory(branch, botMi, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, phoMai, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, sotCa, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, tom, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, muc, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, boBam, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, xucXich, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, myY, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, kem, LOAD_TEST_INVENTORY_TARGET);
+            topUpInventory(branch, coca, LOAD_TEST_INVENTORY_TARGET * 4);
+        }
+    }
+
+    private Product ensureProduct(String name, String unit) {
+        Product product = productRepository.findByName(name);
+        if (product != null) {
+            return product;
+        }
+        return productRepository.save(new Product(name, unit));
+    }
+
+    private void topUpInventory(Branch branch, Product product, double targetQuantity) {
+        Inventory inventory = inventoryRepository.findByBranchAndProduct(branch, product)
+                .orElseGet(() -> new Inventory(branch, product, 0.0));
+
+        if (inventory.getQuantityAvailable() < targetQuantity) {
+            inventory.setQuantityAvailable(targetQuantity);
+            inventoryRepository.save(inventory);
+        }
+
+        double usableBatchQuantity = inventoryBatchRepository
+                .findUsableBatchesForDeduction(branch, product, LocalDate.now())
+                .stream()
+                .mapToDouble(InventoryBatch::getQuantityRemaining)
+                .sum();
+
+        double desiredQuantity = inventory.getQuantityAvailable();
+        if (usableBatchQuantity < desiredQuantity) {
             inventoryBatchRepository.save(new InventoryBatch(
-                    inventory.getBranch(),
-                    inventory.getProduct(),
-                    inventory.getQuantityAvailable(),
-                    importedAt,
-                    expiredAt
+                    branch,
+                    product,
+                    desiredQuantity - usableBatchQuantity,
+                    LocalDateTime.now(),
+                    LocalDate.now().plusMonths(3)
             ));
         }
     }
 
-    // --- HELPER METHODS ---
     private void createPizza(Category cat, String name, String desc, String imageUrl,
                              Product bot, Product phomai, Product sot, Product topping) {
         Dish dish = new Dish();

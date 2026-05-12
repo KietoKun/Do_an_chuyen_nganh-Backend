@@ -60,6 +60,9 @@ app:
       enabled: ${REGISTRATION_MAIL_ENABLED:false}
   inventory:
     expiry-alert-days: ${INVENTORY_EXPIRY_ALERT_DAYS:2}
+  seed:
+    load-test:
+      enabled: ${LOAD_TEST_SEED_ENABLED:false}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}

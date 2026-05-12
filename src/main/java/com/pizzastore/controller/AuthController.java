@@ -2,8 +2,10 @@ package com.pizzastore.controller;
 
 import com.pizzastore.dto.ApiMessageResponse;
 import com.pizzastore.dto.ChangePasswordRequest;
+import com.pizzastore.dto.ForgotPasswordRequest;
 import com.pizzastore.dto.RegisterOtpRequest;
 import com.pizzastore.dto.RegisterRequest;
+import com.pizzastore.dto.ResetPasswordRequest;
 import com.pizzastore.entity.Account;
 import com.pizzastore.entity.Branch;
 import com.pizzastore.entity.Customer;
@@ -16,6 +18,7 @@ import com.pizzastore.repository.CustomerRepository;
 import com.pizzastore.repository.EmployeeRepository;
 import com.pizzastore.security.JwtUtils;
 import com.pizzastore.security.UserDetailsImpl;
+import com.pizzastore.service.PasswordResetService;
 import com.pizzastore.service.RefreshTokenService;
 import com.pizzastore.service.RegistrationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +34,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -46,6 +50,7 @@ public class AuthController {
     private final BranchRepository branchRepository;
     private final RegistrationService registrationService;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetService passwordResetService;
 
     @Autowired
     public AuthController(AuthenticationManager authenticationManager,
@@ -56,7 +61,8 @@ public class AuthController {
                           EmployeeRepository employeeRepository,
                           BranchRepository branchRepository,
                           RegistrationService registrationService,
-                          RefreshTokenService refreshTokenService) {
+                          RefreshTokenService refreshTokenService,
+                          PasswordResetService passwordResetService) {
         this.authenticationManager = authenticationManager;
         this.accountRepository = accountRepository;
         this.passwordEncoder = passwordEncoder;
@@ -66,6 +72,7 @@ public class AuthController {
         this.branchRepository = branchRepository;
         this.registrationService = registrationService;
         this.refreshTokenService = refreshTokenService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register/request-otp")
@@ -293,6 +300,10 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Mật khẩu hiện tại không đúng");
         }
 
+        if (passwordEncoder.matches(request.getNewPassword(), account.getPassword())) {
+            return ResponseEntity.badRequest().body(new ApiMessageResponse("Mật khẩu mới không được trùng với mật khẩu cũ."));
+        }
+
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
         if (account.isFirstLogin()) {
             account.setFirstLogin(false);
@@ -300,6 +311,52 @@ public class AuthController {
         accountRepository.save(account);
 
         return ResponseEntity.ok("Đổi mật khẩu thành công");
+    }
+
+    @PostMapping("/forgot-password/request-otp")
+    @Operation(
+            summary = "Quen mat khau - Gui ma OTP den email",
+            description = """
+                    Frontend gui username/so dien thoai cua tai khoan.
+                    He thong tim email trong ho so khach hang hoac nhan vien, sau do gui ma OTP dat lai mat khau.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Gui OTP thanh cong"),
+            @ApiResponse(responseCode = "400", description = "Tai khoan khong ton tai hoac chua co email"),
+            @ApiResponse(responseCode = "429", description = "Gui OTP qua nhanh"),
+            @ApiResponse(responseCode = "503", description = "Khong gui duoc OTP")
+    })
+    public ResponseEntity<?> requestForgotPasswordOtp(@RequestBody ForgotPasswordRequest request) {
+        try {
+            passwordResetService.requestResetOtp(request);
+            return ResponseEntity.ok(new ApiMessageResponse("Mã xác thực đặt lại mật khẩu đã được gửi đến email của bạn."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(new ApiMessageResponse(e.getReason()));
+        }
+    }
+
+    @PostMapping("/forgot-password/reset")
+    @Operation(
+            summary = "Quen mat khau - Xac thuc OTP va tao mat khau moi",
+            description = """
+                    Frontend gui username/so dien thoai, ma OTP va mat khau moi.
+                    Mat khau moi khong duoc trung voi mat khau cu.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Dat lai mat khau thanh cong"),
+            @ApiResponse(responseCode = "400", description = "OTP sai, het han, da dung hoac mat khau moi trung mat khau cu")
+    })
+    public ResponseEntity<?> resetForgotPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(request);
+            return ResponseEntity.ok(new ApiMessageResponse("Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới."));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(new ApiMessageResponse(e.getReason()));
+        }
     }
 
     @PostMapping("/init-admin")

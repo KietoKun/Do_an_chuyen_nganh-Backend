@@ -1,6 +1,7 @@
 package com.pizzastore.service;
 
 import com.pizzastore.dto.OrderRequest;
+import com.pizzastore.dto.StaffOrderRequest;
 import com.pizzastore.entity.*;
 import com.pizzastore.enums.DeliveryMethod;
 import com.pizzastore.enums.OrderStatus;
@@ -8,6 +9,7 @@ import com.pizzastore.enums.RoleName;
 import com.pizzastore.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -18,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class OrderService {
@@ -35,6 +38,7 @@ public class OrderService {
     private final InventoryBatchConsumptionRepository inventoryBatchConsumptionRepository;
     private final OrderRealtimeService orderRealtimeService;
     private final BranchAccessService branchAccessService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${goong.api.key}")
     private String goongApiKey;
@@ -54,7 +58,8 @@ public class OrderService {
                         InventoryBatchRepository inventoryBatchRepository,
                         InventoryBatchConsumptionRepository inventoryBatchConsumptionRepository,
                         OrderRealtimeService orderRealtimeService,
-                        BranchAccessService branchAccessService) {
+                        BranchAccessService branchAccessService,
+                        PasswordEncoder passwordEncoder) {
         this.orderRepository = orderRepository;
         this.dishVariantRepository = dishVariantRepository;
         this.customerRepository = customerRepository;
@@ -68,6 +73,7 @@ public class OrderService {
         this.inventoryBatchConsumptionRepository = inventoryBatchConsumptionRepository;
         this.orderRealtimeService = orderRealtimeService;
         this.branchAccessService = branchAccessService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -175,6 +181,201 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         orderRealtimeService.publishOrderCreated(savedOrder);
         return savedOrder;
+    }
+
+    @Transactional
+    public Order createStaffOrder(String staffUsername, StaffOrderRequest request) {
+        validateOrderRequest(request);
+
+        Customer customer = resolveCustomerForStaffOrder(request);
+        Account staffAccount = branchAccessService.getAccount(staffUsername);
+        Employee staff = staffAccount.getRole() == RoleName.SUPER_ADMIN
+                ? employeeRepository.findByAccount_Username(staffUsername).orElse(null)
+                : branchAccessService.getEmployee(staffUsername);
+        Long visibleBranchId = branchAccessService.resolveVisibleBranchId(staffUsername, request.getBranchId());
+        Branch orderBranch;
+        if (visibleBranchId != null) {
+            orderBranch = branchRepository.findById(visibleBranchId)
+                    .orElseThrow(() -> new RuntimeException("Chi nhanh khong ton tai"));
+            if (!orderBranch.isActive()) {
+                throw new RuntimeException("Chi nhanh dang bi khoa");
+            }
+        } else {
+            orderBranch = null;
+        }
+
+        Order order = new Order();
+        order.setCustomer(customer);
+        order.setOrderTime(LocalDateTime.now());
+        order.setStatus(OrderStatus.CONFIRMED);
+        if (staff != null) {
+            order.setHandledBy(staff);
+        }
+        order.setAcceptedAt(LocalDateTime.now());
+        order.setNote(request.getNote());
+
+        DeliveryMethod method = DeliveryMethod.DELIVERY;
+        if (request.getDeliveryMethod() != null && !request.getDeliveryMethod().isEmpty()) {
+            try {
+                method = DeliveryMethod.valueOf(request.getDeliveryMethod().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                method = DeliveryMethod.DELIVERY;
+            }
+        }
+        order.setDeliveryMethod(method);
+
+        if (method == DeliveryMethod.DELIVERY) {
+            if (request.getDeliveryAddress() != null && !request.getDeliveryAddress().trim().isEmpty()) {
+                order.setDeliveryAddress(request.getDeliveryAddress());
+            } else {
+                if (customer.getAddress() == null || customer.getAddress().trim().isEmpty()) {
+                    throw new RuntimeException("Vui long nhap dia chi giao hang");
+                }
+                order.setDeliveryAddress(customer.getAddress());
+            }
+        } else {
+            order.setDeliveryAddress("Nhan tai quan");
+        }
+
+        double totalAmount = 0;
+        for (OrderRequest.CartItem item : request.getItems()) {
+            DishVariant variant = dishVariantRepository.findById(item.getVariantId())
+                    .orElseThrow(() -> new RuntimeException("Mon/Size ID " + item.getVariantId() + " khong ton tai"));
+
+            if (!variant.getDish().isAvailable()) {
+                throw new RuntimeException("Mon " + variant.getDish().getName() + " hien da ngung phuc vu");
+            }
+
+            boolean hasToppings = item.getToppingIds() != null && !item.getToppingIds().isEmpty();
+            String categoryName = variant.getDish().getCategory().getName();
+            if (hasToppings && !categoryName.equalsIgnoreCase("Pizza")) {
+                throw new RuntimeException("Chi co the them topping cho mon Pizza");
+            }
+
+            OrderDetail detail = new OrderDetail();
+            detail.setDishVariant(variant);
+            detail.setQuantity(item.getQuantity());
+
+            double toppingsPrice = 0;
+            List<Topping> toppings = new ArrayList<>();
+            if (hasToppings) {
+                toppings = toppingRepository.findAllById(item.getToppingIds());
+                detail.setToppings(toppings);
+                for (Topping topping : toppings) {
+                    toppingsPrice += topping.getPrice();
+                }
+            }
+
+            double finalUnitPrice = variant.getPrice() + toppingsPrice;
+            detail.setUnitPrice(finalUnitPrice);
+            double subTotal = finalUnitPrice * item.getQuantity();
+            detail.setSubTotal(subTotal);
+
+            totalAmount += subTotal;
+            order.addDetail(detail);
+        }
+
+        if (orderBranch == null) {
+            orderBranch = findBestBranchForOrder(order.getOrderDetails(), request.getCustomerLat(), request.getCustomerLng());
+        }
+        order.setBranch(orderBranch);
+
+        for (OrderDetail detail : order.getOrderDetails()) {
+            DishVariant variant = detail.getDishVariant();
+            int quantityOrdered = detail.getQuantity();
+
+            for (Recipe recipe : variant.getRecipes()) {
+                Product product = recipe.getProduct();
+                double totalNeeded = recipe.getQuantityNeeded() * quantityOrdered;
+                deductStockByBatch(orderBranch, product, totalNeeded, detail);
+            }
+
+            if (detail.getToppings() != null) {
+                for (Topping topping : detail.getToppings()) {
+                    Product product = topping.getProduct();
+                    double totalNeeded = topping.getQuantityNeeded() * quantityOrdered;
+                    deductStockByBatch(orderBranch, product, totalNeeded, detail);
+                }
+            }
+        }
+
+        order.setTotalPrice(totalAmount);
+        double discountAmount = applyCouponIfNeeded(order, customer, request, totalAmount);
+        order.setFinalTotalPrice(totalAmount - discountAmount);
+
+        Order savedOrder = orderRepository.save(order);
+        orderRealtimeService.publishOrderCreated(savedOrder);
+        return savedOrder;
+    }
+
+    private Customer resolveCustomerForStaffOrder(StaffOrderRequest request) {
+        if (request.getCustomerId() != null) {
+            return customerRepository.findById(request.getCustomerId())
+                    .orElseThrow(() -> new RuntimeException("Khong tim thay khach hang"));
+        }
+
+        String phoneNumber = trimToNull(request.getCustomerPhoneNumber());
+        if (phoneNumber == null) {
+            throw new RuntimeException("Vui long chon khach hang hoac nhap so dien thoai khach hang");
+        }
+
+        return customerRepository.findByPhoneNumber(phoneNumber)
+                .orElseGet(() -> createCustomerFromStaffOrder(request, phoneNumber));
+    }
+
+    private Customer createCustomerFromStaffOrder(StaffOrderRequest request, String phoneNumber) {
+        if (accountRepository.existsByUsername(phoneNumber)) {
+            throw new RuntimeException("So dien thoai da ton tai nhung chua gan voi ho so khach hang");
+        }
+
+        String fullName = trimToNull(request.getCustomerFullName());
+        if (fullName == null) {
+            throw new RuntimeException("Vui long nhap ho ten khach hang moi");
+        }
+
+        String email = trimToNull(request.getCustomerEmail());
+        if (email != null && customerRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email nay da duoc su dung cho khach hang khac");
+        }
+
+        Account account = new Account();
+        account.setUsername(phoneNumber);
+        account.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+        account.setRole(RoleName.CUSTOMER);
+        account.setFirstLogin(true);
+
+        Customer customer = new Customer();
+        customer.setFullName(fullName);
+        customer.setPhoneNumber(phoneNumber);
+        customer.setEmail(email);
+        customer.setAddress(trimToNull(request.getDeliveryAddress()));
+        customer.setAccount(account);
+        return customerRepository.save(customer);
+    }
+
+    private void validateOrderRequest(OrderRequest request) {
+        if (request == null) {
+            throw new RuntimeException("Thong tin don hang khong duoc de trong");
+        }
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Don hang phai co it nhat mot mon");
+        }
+        for (OrderRequest.CartItem item : request.getItems()) {
+            if (item.getVariantId() == null) {
+                throw new RuntimeException("Vui long chon bien the mon");
+            }
+            if (item.getQuantity() <= 0) {
+                throw new RuntimeException("So luong mon phai lon hon 0");
+            }
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     public List<Order> getInternalOrders(String username, Long branchId) {

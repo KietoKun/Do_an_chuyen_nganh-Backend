@@ -80,6 +80,34 @@ public class SmtpEmailService implements EmailService {
     }
 
     @Override
+    public boolean sendPasswordResetOtpEmail(String recipientEmail, String fullName, String otpCode, long expiresInMinutes) {
+        if (recipientEmail == null || recipientEmail.isBlank()) {
+            return false;
+        }
+
+        if (!mailEnabled) {
+            log.info("Mail is disabled. Password reset OTP mail skipped for {}", recipientEmail);
+            return false;
+        }
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(senderEmail);
+            message.setTo(recipientEmail);
+            message.setSubject("Pizza Store - Password Reset OTP");
+            message.setText("Xin chào " + fullName + ",\n\n"
+                    + "Mã xác thực đặt lại mật khẩu Pizza Store của bạn là: " + otpCode + "\n"
+                    + "Mã này có hiệu lực trong " + expiresInMinutes + " phút.\n\n"
+                    + "Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.");
+            mailSender.send(message);
+            return true;
+        } catch (Exception ex) {
+            log.error("Failed to send password reset OTP email to {}", recipientEmail, ex);
+            return false;
+        }
+    }
+
+    @Override
     public boolean sendInventoryExpiryAlertEmail(String recipientEmail, String subject, String content) {
         if (recipientEmail == null || recipientEmail.isBlank()) {
             return false;

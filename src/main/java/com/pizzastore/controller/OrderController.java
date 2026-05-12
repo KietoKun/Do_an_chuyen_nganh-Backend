@@ -2,6 +2,7 @@ package com.pizzastore.controller;
 
 import com.pizzastore.dto.OrderHistoryResponse;
 import com.pizzastore.dto.OrderRequest;
+import com.pizzastore.dto.StaffOrderRequest;
 import com.pizzastore.entity.Order;
 import com.pizzastore.enums.OrderStatus;
 import com.pizzastore.repository.OrderRepository;
@@ -42,6 +43,21 @@ public class OrderController {
             return ResponseEntity.badRequest().body("Không thể đặt hàng: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi hệ thống: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/staff")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER', 'STAFF')")
+    @Operation(summary = "Nhan vien tao don hang cho khach", description = "Nhan vien/quan ly tao don tai chi nhanh cua minh cho khach hang da co hoac khach hang moi.")
+    public ResponseEntity<?> placeOrderForCustomer(@RequestBody StaffOrderRequest request) {
+        try {
+            String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+            Order newOrder = orderService.createStaffOrder(currentUsername, request);
+            return ResponseEntity.ok(newOrder);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("Khong the tao don cho khach: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Loi he thong: " + e.getMessage());
         }
     }
 
