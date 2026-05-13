@@ -10,6 +10,7 @@ public class EmployeeResponse {
     private LocalDate dateOfBirth;
     private String email;
     private String position;
+    private Double salaryPerHour;
     private String username;
     private String role;
     private Long branchId;
@@ -39,6 +40,13 @@ public class EmployeeResponse {
         this.branchName = branchName;
     }
 
+    public EmployeeResponse(Long id, String fullName, String phoneNumber, String address, LocalDate dateOfBirth,
+                            String email, String position, Double salaryPerHour, String username, String role,
+                            Long branchId, String branchName) {
+        this(id, fullName, phoneNumber, address, dateOfBirth, email, position, username, role, branchId, branchName);
+        this.salaryPerHour = salaryPerHour;
+    }
+
     public Long getId() { return id; }
     public String getFullName() { return fullName; }
     public String getPhoneNumber() { return phoneNumber; }
@@ -46,6 +54,7 @@ public class EmployeeResponse {
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public String getEmail() { return email; }
     public String getPosition() { return position; }
+    public Double getSalaryPerHour() { return salaryPerHour; }
     public String getUsername() { return username; }
     public String getRole() { return role; }
     public Long getBranchId() { return branchId; }

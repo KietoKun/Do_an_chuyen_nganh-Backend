@@ -38,6 +38,7 @@ public class EmployeeController {
                     request.getDateOfBirth(),
                     request.getEmail(),
                     request.getPosition(),
+                    request.getSalaryPerHour(),
                     request.getRole(),
                     request.getBranchId(),
                     currentUsername

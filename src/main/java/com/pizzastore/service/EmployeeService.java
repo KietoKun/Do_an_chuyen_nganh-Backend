@@ -39,6 +39,13 @@ public class EmployeeService {
     @Transactional
     public String createEmployee(String fullName, String phone, String address, java.time.LocalDate dateOfBirth,
                                  String email, String position, RoleName role, Long branchId, String creatorUsername) {
+        return createEmployee(fullName, phone, address, dateOfBirth, email, position, null, role, branchId, creatorUsername);
+    }
+
+    @Transactional
+    public String createEmployee(String fullName, String phone, String address, java.time.LocalDate dateOfBirth,
+                                 String email, String position, Double salaryPerHour, RoleName role,
+                                 Long branchId, String creatorUsername) {
         if (role == RoleName.CUSTOMER || role == RoleName.SUPER_ADMIN) {
             throw new RuntimeException("Không thể tạo nhân viên với quyền " + role);
         }
@@ -66,6 +73,7 @@ public class EmployeeService {
         employee.setDateOfBirth(dateOfBirth);
         employee.setEmail(email);
         employee.setPosition(position);
+        employee.setSalaryPerHour(salaryPerHour);
         employee.setBranch(assignedBranch);
         employee.setAccount(account);
 
@@ -190,6 +198,7 @@ public class EmployeeService {
                 emp.getDateOfBirth(),
                 emp.getEmail(),
                 emp.getPosition(),
+                emp.getSalaryPerHour(),
                 emp.getAccount().getUsername(),
                 emp.getAccount().getRole().name(),
                 emp.getBranch() != null ? emp.getBranch().getId() : null,

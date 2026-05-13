@@ -11,6 +11,7 @@ public class CreateEmployeeRequest {
     private LocalDate dateOfBirth;
     private String email;
     private String position;
+    private Double salaryPerHour;
     private RoleName role;
     private Long branchId;
 
@@ -60,6 +61,14 @@ public class CreateEmployeeRequest {
 
     public void setPosition(String position) {
         this.position = position;
+    }
+
+    public Double getSalaryPerHour() {
+        return salaryPerHour;
+    }
+
+    public void setSalaryPerHour(Double salaryPerHour) {
+        this.salaryPerHour = salaryPerHour;
     }
 
     public RoleName getRole() {
