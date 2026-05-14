@@ -15,11 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class AttendanceService {
+    private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final EmployeeRepository employeeRepository;
     private final BranchAccessService branchAccessService;
@@ -45,7 +48,7 @@ public class AttendanceService {
                     throw new RuntimeException("Nhân viên đang có ca chưa check-out.");
                 });
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = nowInVietnam();
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);
         record.setBranch(branch);
@@ -67,7 +70,7 @@ public class AttendanceService {
                 )
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ca đang check-in để check-out."));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = nowInVietnam();
         long workMinutes = Math.max(0, Duration.between(record.getCheckInTime(), now).toMinutes());
         record.setCheckOutTime(now);
         record.setWorkMinutes(workMinutes);
@@ -134,12 +137,17 @@ public class AttendanceService {
     }
 
     private DateRange toRange(LocalDate from, LocalDate to) {
-        LocalDate safeFrom = from != null ? from : LocalDate.now().withDayOfMonth(1);
-        LocalDate safeTo = to != null ? to : LocalDate.now();
+        LocalDate today = LocalDate.now(VIETNAM_ZONE);
+        LocalDate safeFrom = from != null ? from : today.withDayOfMonth(1);
+        LocalDate safeTo = to != null ? to : today;
         if (safeTo.isBefore(safeFrom)) {
             throw new RuntimeException("Ngày kết thúc không được nhỏ hơn ngày bắt đầu.");
         }
         return new DateRange(safeFrom.atStartOfDay(), safeTo.plusDays(1).atStartOfDay());
+    }
+
+    private LocalDateTime nowInVietnam() {
+        return LocalDateTime.now(VIETNAM_ZONE);
     }
 
     private AttendanceRecordResponse toResponse(AttendanceRecord record) {
