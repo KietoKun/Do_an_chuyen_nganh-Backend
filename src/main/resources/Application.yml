@@ -82,4 +82,4 @@ goong:
     key: ${GOONG_API_KEY}
 
 frontend:
-  url: "http://localhost:5173"
+  url: ${FRONTEND_URL:http://localhost:5173}

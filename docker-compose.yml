@@ -13,6 +13,8 @@ services:
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
       - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/certbot/www:/var/www/certbot
+      - ./nginx/certbot/conf:/etc/letsencrypt
 
   db:
     image: postgres:15
@@ -66,6 +68,7 @@ services:
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
       GOONG_API_KEY: ${GOONG_API_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
 
       PAYMENT_VNPAY_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
       PAYMENT_VNPAY_RETURN_URL: ${VNPAY_RETURN_URL}

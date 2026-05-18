@@ -40,6 +40,8 @@ build/
 .idea/
 
 .env
-
+*.pem
 nginx/certs/*
+nginx/certbot/conf/
+nginx/certbot/www/
 !nginx/certs/.gitkeep

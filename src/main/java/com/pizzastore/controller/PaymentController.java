@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,9 @@ public class PaymentController {
 
     @Autowired
     private PaymentService paymentService;
+
+    @Value("${frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @GetMapping("/create_payment")
     @Operation(summary = "Tạo URL Thanh toán VNPAY", description = "Gọi API này truyền vào Order ID để hệ thống tạo đường link an toàn. Frontend sẽ dùng link này mở trang thanh toán của VNPAY cho khách.")
@@ -39,8 +43,6 @@ public class PaymentController {
         int paymentStatus = paymentService.orderReturn(request);
 
         // 2. Cấu hình URL Frontend (Sửa port thành 5173)
-        String frontendUrl = "http://localhost:5173";
-
         if (paymentStatus == 1) {
             // --- THANH TOÁN THÀNH CÔNG ---
             String orderId = request.getParameter("vnp_OrderInfo");
