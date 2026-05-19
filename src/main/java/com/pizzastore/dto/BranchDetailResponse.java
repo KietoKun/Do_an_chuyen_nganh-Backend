@@ -12,17 +12,22 @@ public class BranchDetailResponse {
     private String address;
     private Double latitude;
     private Double longitude;
+    private Double maxServiceRadiusKm;
+    private Integer maxPendingCookOrders;
     private boolean active;
     private List<EmployeeSummary> employees;
     private List<OrderSummary> orders;
 
-    public BranchDetailResponse(Long id, String name, String address, Double latitude, Double longitude, boolean active,
+    public BranchDetailResponse(Long id, String name, String address, Double latitude, Double longitude,
+                                Double maxServiceRadiusKm, Integer maxPendingCookOrders, boolean active,
                                 List<EmployeeSummary> employees, List<OrderSummary> orders) {
         this.id = id;
         this.name = name;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.maxServiceRadiusKm = maxServiceRadiusKm;
+        this.maxPendingCookOrders = maxPendingCookOrders;
         this.active = active;
         this.employees = employees;
         this.orders = orders;
@@ -101,6 +106,8 @@ public class BranchDetailResponse {
     public String getAddress() { return address; }
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
+    public Double getMaxServiceRadiusKm() { return maxServiceRadiusKm; }
+    public Integer getMaxPendingCookOrders() { return maxPendingCookOrders; }
     public boolean isActive() { return active; }
     public List<EmployeeSummary> getEmployees() { return employees; }
     public List<OrderSummary> getOrders() { return orders; }

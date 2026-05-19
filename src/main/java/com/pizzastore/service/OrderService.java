@@ -7,6 +7,7 @@ import com.pizzastore.enums.DeliveryMethod;
 import com.pizzastore.enums.OrderStatus;
 import com.pizzastore.enums.RoleName;
 import com.pizzastore.repository.*;
+import com.pizzastore.util.LocationUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,13 @@ public class OrderService {
     private final OrderRealtimeService orderRealtimeService;
     private final BranchAccessService branchAccessService;
     private final PasswordEncoder passwordEncoder;
+    private static final List<OrderStatus> PENDING_COOK_SLOT_STATUSES = List.of(
+            OrderStatus.PENDING,
+            OrderStatus.PAID,
+            OrderStatus.CONFIRMED
+    );
+    private static final double DEFAULT_MAX_SERVICE_RADIUS_KM = 7.0;
+    private static final int DEFAULT_MAX_PENDING_COOK_ORDERS = 10;
 
     @Value("${goong.api.key}")
     private String goongApiKey;
@@ -153,26 +162,7 @@ public class OrderService {
             order.addDetail(detail);
         }
 
-        Branch orderBranch = findBestBranchForOrder(order.getOrderDetails(), request.getCustomerLat(), request.getCustomerLng());
-        order.setBranch(orderBranch);
-        for (OrderDetail detail : order.getOrderDetails()) {
-            DishVariant variant = detail.getDishVariant();
-            int quantityOrdered = detail.getQuantity();
-
-            for (Recipe recipe : variant.getRecipes()) {
-                Product product = recipe.getProduct();
-                double totalNeeded = recipe.getQuantityNeeded() * quantityOrdered;
-                deductStockByBatch(orderBranch, product, totalNeeded, detail);
-            }
-
-            if (detail.getToppings() != null) {
-                for (Topping topping : detail.getToppings()) {
-                    Product product = topping.getProduct();
-                    double totalNeeded = topping.getQuantityNeeded() * quantityOrdered;
-                    deductStockByBatch(orderBranch, product, totalNeeded, detail);
-                }
-            }
-        }
+        assignBestBranchAndDeductStock(order, request.getCustomerLat(), request.getCustomerLng());
 
         order.setTotalPrice(totalAmount);
         double discountAmount = applyCouponIfNeeded(order, customer, request, totalAmount);
@@ -275,28 +265,10 @@ public class OrderService {
             order.addDetail(detail);
         }
 
-        if (orderBranch == null) {
-            orderBranch = findBestBranchForOrder(order.getOrderDetails(), request.getCustomerLat(), request.getCustomerLng());
-        }
-        order.setBranch(orderBranch);
-
-        for (OrderDetail detail : order.getOrderDetails()) {
-            DishVariant variant = detail.getDishVariant();
-            int quantityOrdered = detail.getQuantity();
-
-            for (Recipe recipe : variant.getRecipes()) {
-                Product product = recipe.getProduct();
-                double totalNeeded = recipe.getQuantityNeeded() * quantityOrdered;
-                deductStockByBatch(orderBranch, product, totalNeeded, detail);
-            }
-
-            if (detail.getToppings() != null) {
-                for (Topping topping : detail.getToppings()) {
-                    Product product = topping.getProduct();
-                    double totalNeeded = topping.getQuantityNeeded() * quantityOrdered;
-                    deductStockByBatch(orderBranch, product, totalNeeded, detail);
-                }
-            }
+        if (orderBranch != null) {
+            assignSpecificBranchAndDeductStock(order, orderBranch.getId());
+        } else {
+            assignBestBranchAndDeductStock(order, request.getCustomerLat(), request.getCustomerLng());
         }
 
         order.setTotalPrice(totalAmount);
@@ -640,6 +612,202 @@ public class OrderService {
         order.setCouponCode(code);
         order.setDiscountAmount(discountAmount);
         return discountAmount;
+    }
+
+    private void assignBestBranchAndDeductStock(Order order, Double customerLat, Double customerLng) {
+        List<BranchCandidate> candidates = buildBranchCandidates(customerLat, customerLng);
+        if (candidates.isEmpty()) {
+            throw new RuntimeException("Không có chi nhánh đang hoạt động để xử lý đơn hàng");
+        }
+
+        for (BranchCandidate candidate : candidates) {
+            if (tryAssignBranchAndDeductStock(order, candidate.branchId())) {
+                return;
+            }
+        }
+
+        throw new RuntimeException("Không có chi nhánh nào đủ khả năng nhận đơn lúc này");
+    }
+
+    private void assignSpecificBranchAndDeductStock(Order order, Long branchId) {
+        if (!tryAssignBranchAndDeductStock(order, branchId)) {
+            throw new RuntimeException("Chi nhánh đã chọn đang quá tải hoặc không đủ nguyên liệu");
+        }
+    }
+
+    private boolean tryAssignBranchAndDeductStock(Order order, Long branchId) {
+        Branch lockedBranch = branchRepository.findByIdForUpdate(branchId)
+                .orElseThrow(() -> new RuntimeException("Chi nhánh không tồn tại"));
+        if (!lockedBranch.isActive()) {
+            return false;
+        }
+
+        long currentLoad = countCurrentLoad(lockedBranch);
+        if (currentLoad >= getMaxPendingCookOrders(lockedBranch)) {
+            return false;
+        }
+
+        Map<Product, Double> requiredProducts = buildRequiredProducts(order.getOrderDetails());
+        if (requiredProducts.isEmpty()) {
+            order.setBranch(lockedBranch);
+            return true;
+        }
+
+        List<Product> products = requiredProducts.keySet().stream()
+                .sorted(Comparator.comparing(Product::getId))
+                .toList();
+        List<Inventory> lockedInventories = inventoryRepository.findByBranchAndProductsForUpdate(lockedBranch, products);
+        List<InventoryBatch> lockedBatches = inventoryBatchRepository.findUsableBatchesForUpdate(
+                lockedBranch,
+                products,
+                LocalDate.now()
+        );
+
+        if (!hasEnoughStock(requiredProducts, lockedInventories, lockedBatches)) {
+            return false;
+        }
+
+        deductLockedStock(lockedBranch, order.getOrderDetails(), lockedInventories, lockedBatches);
+        order.setBranch(lockedBranch);
+        return true;
+    }
+
+    private List<BranchCandidate> buildBranchCandidates(Double customerLat, Double customerLng) {
+        return branchRepository.findAll().stream()
+                .filter(Branch::isActive)
+                .map(branch -> toBranchCandidate(branch, customerLat, customerLng))
+                .sorted(Comparator
+                        .comparing(BranchCandidate::outsideRadius)
+                        .thenComparingDouble(BranchCandidate::score)
+                        .thenComparingDouble(BranchCandidate::distanceKm)
+                        .thenComparing(BranchCandidate::branchId))
+                .toList();
+    }
+
+    private BranchCandidate toBranchCandidate(Branch branch, Double customerLat, Double customerLng) {
+        double distanceKm = calculateDistanceKm(branch, customerLat, customerLng);
+        boolean outsideRadius = distanceKm > getMaxServiceRadiusKm(branch);
+        long currentLoad = orderRepository.countByBranchIdAndStatusIn(branch.getId(), PENDING_COOK_SLOT_STATUSES);
+        double loadRatio = currentLoad / (double) getMaxPendingCookOrders(branch);
+        double score = (distanceKm * 0.7) + (loadRatio * 10.0 * 0.3);
+        return new BranchCandidate(branch.getId(), distanceKm, outsideRadius, score);
+    }
+
+    private double calculateDistanceKm(Branch branch, Double customerLat, Double customerLng) {
+        if (customerLat == null || customerLng == null || branch.getLatitude() == null || branch.getLongitude() == null) {
+            return Double.MAX_VALUE;
+        }
+        return LocationUtils.calculateDistance(customerLat, customerLng, branch.getLatitude(), branch.getLongitude());
+    }
+
+    private long countCurrentLoad(Branch branch) {
+        return orderRepository.countByBranchIdAndStatusIn(branch.getId(), PENDING_COOK_SLOT_STATUSES);
+    }
+
+    private int getMaxPendingCookOrders(Branch branch) {
+        return branch.getMaxPendingCookOrders() == null || branch.getMaxPendingCookOrders() <= 0
+                ? DEFAULT_MAX_PENDING_COOK_ORDERS
+                : branch.getMaxPendingCookOrders();
+    }
+
+    private double getMaxServiceRadiusKm(Branch branch) {
+        return branch.getMaxServiceRadiusKm() == null || branch.getMaxServiceRadiusKm() <= 0
+                ? DEFAULT_MAX_SERVICE_RADIUS_KM
+                : branch.getMaxServiceRadiusKm();
+    }
+
+    private boolean hasEnoughStock(Map<Product, Double> requiredProducts,
+                                   List<Inventory> inventories,
+                                   List<InventoryBatch> batches) {
+        Map<Long, Double> inventoryByProductId = new HashMap<>();
+        for (Inventory inventory : inventories) {
+            inventoryByProductId.put(inventory.getProduct().getId(), inventory.getQuantityAvailable());
+        }
+
+        Map<Long, Double> batchQuantityByProductId = new HashMap<>();
+        for (InventoryBatch batch : batches) {
+            batchQuantityByProductId.merge(batch.getProduct().getId(), batch.getQuantityRemaining(), Double::sum);
+        }
+
+        for (Map.Entry<Product, Double> entry : requiredProducts.entrySet()) {
+            Long productId = entry.getKey().getId();
+            double requiredQuantity = entry.getValue();
+            double inventoryQuantity = inventoryByProductId.getOrDefault(productId, 0.0);
+            double batchQuantity = batchQuantityByProductId.getOrDefault(productId, 0.0);
+            if (Math.min(inventoryQuantity, batchQuantity) < requiredQuantity) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void deductLockedStock(Branch branch,
+                                   List<OrderDetail> details,
+                                   List<Inventory> inventories,
+                                   List<InventoryBatch> batches) {
+        Map<Long, Inventory> inventoryByProductId = new HashMap<>();
+        for (Inventory inventory : inventories) {
+            inventoryByProductId.put(inventory.getProduct().getId(), inventory);
+        }
+
+        Map<Long, List<InventoryBatch>> batchesByProductId = new HashMap<>();
+        for (InventoryBatch batch : batches) {
+            batchesByProductId.computeIfAbsent(batch.getProduct().getId(), ignored -> new ArrayList<>()).add(batch);
+        }
+
+        for (OrderDetail detail : details) {
+            DishVariant variant = detail.getDishVariant();
+            int quantityOrdered = detail.getQuantity();
+
+            for (Recipe recipe : variant.getRecipes()) {
+                deductLockedProduct(branch, recipe.getProduct(), recipe.getQuantityNeeded() * quantityOrdered,
+                        detail, inventoryByProductId, batchesByProductId);
+            }
+
+            if (detail.getToppings() != null) {
+                for (Topping topping : detail.getToppings()) {
+                    deductLockedProduct(branch, topping.getProduct(), topping.getQuantityNeeded() * quantityOrdered,
+                            detail, inventoryByProductId, batchesByProductId);
+                }
+            }
+        }
+    }
+
+    private void deductLockedProduct(Branch branch,
+                                     Product product,
+                                     double totalNeeded,
+                                     OrderDetail detail,
+                                     Map<Long, Inventory> inventoryByProductId,
+                                     Map<Long, List<InventoryBatch>> batchesByProductId) {
+        Inventory inventory = inventoryByProductId.get(product.getId());
+        if (inventory == null || inventory.getQuantityAvailable() < totalNeeded) {
+            throw new RuntimeException("HẾT HÀNG! Chi nhánh " + branch.getName() + " không đủ nguyên liệu: " + product.getName());
+        }
+
+        double remainingNeeded = totalNeeded;
+        List<InventoryBatch> productBatches = batchesByProductId.getOrDefault(product.getId(), List.of());
+        for (InventoryBatch batch : productBatches) {
+            if (remainingNeeded <= 0) {
+                break;
+            }
+
+            double deducted = Math.min(batch.getQuantityRemaining(), remainingNeeded);
+            batch.setQuantityRemaining(batch.getQuantityRemaining() - deducted);
+            inventoryBatchRepository.save(batch);
+            detail.addBatchConsumption(new InventoryBatchConsumption(detail, batch, deducted));
+            remainingNeeded -= deducted;
+        }
+
+        if (remainingNeeded > 0) {
+            throw new RuntimeException("HẾT HÀNG! Chi nhánh " + branch.getName()
+                    + " không đủ lô nguyên liệu còn hạn cho: " + product.getName());
+        }
+
+        inventory.setQuantityAvailable(inventory.getQuantityAvailable() - totalNeeded);
+        inventoryRepository.save(inventory);
+    }
+
+    private record BranchCandidate(Long branchId, double distanceKm, boolean outsideRadius, double score) {
     }
 
     private Branch findBestBranchForOrder(List<OrderDetail> details, Double customerLat, Double customerLng) {

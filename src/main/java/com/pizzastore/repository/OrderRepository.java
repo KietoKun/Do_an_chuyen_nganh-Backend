@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -23,6 +24,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByBranch_IdOrderByOrderTimeDesc(Long branchId);
     @Query("SELECT COUNT(o) FROM Order o WHERE o.customer.id = :customerId AND o.couponCode = :code AND o.status <> 'CANCELLED'")
     long countUsedByCustomer(@Param("customerId") Long customerId, @Param("code") String code);
+
+    @Query("""
+            SELECT COUNT(o)
+            FROM Order o
+            WHERE o.branch.id = :branchId
+              AND o.status IN :statuses
+            """)
+    long countByBranchIdAndStatusIn(@Param("branchId") Long branchId,
+                                    @Param("statuses") Collection<OrderStatus> statuses);
 
     @Query("""
             SELECT new com.pizzastore.dto.RevenueSummaryResponse(

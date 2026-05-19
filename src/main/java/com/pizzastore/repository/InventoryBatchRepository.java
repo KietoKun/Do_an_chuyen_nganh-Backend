@@ -3,7 +3,9 @@ package com.pizzastore.repository;
 import com.pizzastore.entity.Branch;
 import com.pizzastore.entity.InventoryBatch;
 import com.pizzastore.entity.Product;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -27,6 +29,20 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
     List<InventoryBatch> findUsableBatchesForDeduction(@Param("branch") Branch branch,
                                                        @Param("product") Product product,
                                                        @Param("today") LocalDate today);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT b
+            FROM InventoryBatch b
+            WHERE b.branch = :branch
+              AND b.product IN :products
+              AND b.quantityRemaining > 0
+              AND (b.expiredAt IS NULL OR b.expiredAt >= :today)
+            ORDER BY b.product.id ASC, CASE WHEN b.expiredAt IS NULL THEN 1 ELSE 0 END, b.expiredAt ASC, b.importedAt ASC, b.id ASC
+            """)
+    List<InventoryBatch> findUsableBatchesForUpdate(@Param("branch") Branch branch,
+                                                    @Param("products") List<Product> products,
+                                                    @Param("today") LocalDate today);
 
     @Query("""
             SELECT b

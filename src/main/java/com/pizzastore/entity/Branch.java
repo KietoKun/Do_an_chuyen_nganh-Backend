@@ -15,6 +15,12 @@ public class Branch {
     private Double latitude;
     private Double longitude;
 
+    @Column(name = "max_service_radius_km")
+    private Double maxServiceRadiusKm = 7.0;
+
+    @Column(name = "max_pending_cook_orders")
+    private Integer maxPendingCookOrders = 10;
+
     @Column(name = "is_active")
     private boolean isActive = true;
 
@@ -73,6 +79,22 @@ public class Branch {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public Double getMaxServiceRadiusKm() {
+        return maxServiceRadiusKm;
+    }
+
+    public void setMaxServiceRadiusKm(Double maxServiceRadiusKm) {
+        this.maxServiceRadiusKm = maxServiceRadiusKm;
+    }
+
+    public Integer getMaxPendingCookOrders() {
+        return maxPendingCookOrders;
+    }
+
+    public void setMaxPendingCookOrders(Integer maxPendingCookOrders) {
+        this.maxPendingCookOrders = maxPendingCookOrders;
     }
 
     // Lưu ý: Kiểu boolean thường dùng tiền tố "is" thay vì "get"

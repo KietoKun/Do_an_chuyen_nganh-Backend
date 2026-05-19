@@ -66,8 +66,28 @@ public class DatabaseSeeder implements CommandLineRunner {
             Branch b1 = new Branch("PizzaStore Quận 10", "268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM", 10.7731, 106.6596);
             Branch b2 = new Branch("PizzaStore Quận 1", "15 Lê Thánh Tôn, Bến Nghé, Quận 1, TP.HCM", 10.7769, 106.7009);
             Branch b3 = new Branch("PizzaStore Thủ Đức", "Võ Văn Ngân, Linh Chiểu, TP. Thủ Đức", 10.8515, 106.7585);
+            b1.setMaxServiceRadiusKm(7.0);
+            b1.setMaxPendingCookOrders(10);
+            b2.setMaxServiceRadiusKm(7.0);
+            b2.setMaxPendingCookOrders(10);
+            b3.setMaxServiceRadiusKm(9.0);
+            b3.setMaxPendingCookOrders(8);
             branchRepository.saveAll(List.of(b1, b2, b3));
         }
+        branchRepository.findAll().forEach(branch -> {
+            boolean changed = false;
+            if (branch.getMaxServiceRadiusKm() == null || branch.getMaxServiceRadiusKm() <= 0) {
+                branch.setMaxServiceRadiusKm(7.0);
+                changed = true;
+            }
+            if (branch.getMaxPendingCookOrders() == null || branch.getMaxPendingCookOrders() <= 0) {
+                branch.setMaxPendingCookOrders(10);
+                changed = true;
+            }
+            if (changed) {
+                branchRepository.save(branch);
+            }
+        });
 
         if (dishRepository.count() == 0) {
             Category catPizza = categoryRepository.save(new Category("Pizza"));

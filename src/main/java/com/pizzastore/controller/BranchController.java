@@ -90,6 +90,8 @@ public class BranchController {
                     branch.getAddress(),
                     branch.getLatitude(),
                     branch.getLongitude(),
+                    branch.getMaxServiceRadiusKm(),
+                    branch.getMaxPendingCookOrders(),
                     branch.isActive(),
                     employees,
                     orders
