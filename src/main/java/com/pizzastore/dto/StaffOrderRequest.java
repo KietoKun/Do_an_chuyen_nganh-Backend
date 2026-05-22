@@ -16,9 +16,6 @@ public class StaffOrderRequest extends OrderRequest {
     @Schema(description = "Email khach hang khi tao moi.", example = "customer@example.com")
     private String customerEmail;
 
-    @Schema(description = "ID chi nhanh tao don. SUPER_ADMIN co the truyen, nhan vien/quan ly chi duoc dung chi nhanh cua minh.", example = "1")
-    private Long branchId;
-
     public Long getCustomerId() {
         return customerId;
     }
@@ -51,11 +48,4 @@ public class StaffOrderRequest extends OrderRequest {
         this.customerEmail = customerEmail;
     }
 
-    public Long getBranchId() {
-        return branchId;
-    }
-
-    public void setBranchId(Long branchId) {
-        this.branchId = branchId;
-    }
 }

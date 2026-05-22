@@ -4,6 +4,7 @@ import com.pizzastore.dto.OrderRequest;
 import com.pizzastore.dto.StaffOrderRequest;
 import com.pizzastore.entity.*;
 import com.pizzastore.enums.DeliveryMethod;
+import com.pizzastore.enums.OrderSource;
 import com.pizzastore.enums.OrderStatus;
 import com.pizzastore.enums.RoleName;
 import com.pizzastore.repository.*;
@@ -39,6 +40,7 @@ public class OrderService {
     private final InventoryBatchRepository inventoryBatchRepository;
     private final InventoryBatchConsumptionRepository inventoryBatchConsumptionRepository;
     private final OrderRealtimeService orderRealtimeService;
+    private final MenuAvailabilityRealtimeService menuAvailabilityRealtimeService;
     private final BranchAccessService branchAccessService;
     private final PasswordEncoder passwordEncoder;
     private static final List<OrderStatus> PENDING_COOK_SLOT_STATUSES = List.of(
@@ -67,6 +69,7 @@ public class OrderService {
                         InventoryBatchRepository inventoryBatchRepository,
                         InventoryBatchConsumptionRepository inventoryBatchConsumptionRepository,
                         OrderRealtimeService orderRealtimeService,
+                        MenuAvailabilityRealtimeService menuAvailabilityRealtimeService,
                         BranchAccessService branchAccessService,
                         PasswordEncoder passwordEncoder) {
         this.orderRepository = orderRepository;
@@ -81,12 +84,14 @@ public class OrderService {
         this.inventoryBatchRepository = inventoryBatchRepository;
         this.inventoryBatchConsumptionRepository = inventoryBatchConsumptionRepository;
         this.orderRealtimeService = orderRealtimeService;
+        this.menuAvailabilityRealtimeService = menuAvailabilityRealtimeService;
         this.branchAccessService = branchAccessService;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public Order createOrder(String username, OrderRequest request) {
+        validateOrderRequest(request);
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
@@ -97,32 +102,18 @@ public class OrderService {
 
         Order order = new Order();
         order.setCustomer(customer);
+        order.setOrderSource(OrderSource.CUSTOMER_APP);
         order.setOrderTime(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
         order.setNote(request.getNote());
 
-        DeliveryMethod method = DeliveryMethod.DELIVERY;
-        if (request.getDeliveryMethod() != null && !request.getDeliveryMethod().isEmpty()) {
-            try {
-                method = DeliveryMethod.valueOf(request.getDeliveryMethod().toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-                method = DeliveryMethod.DELIVERY;
-            }
+        DeliveryMethod method = parseDeliveryMethod(request.getDeliveryMethod());
+        if (method == DeliveryMethod.DINE_IN) {
+            throw new RuntimeException("Khach tu dat hien chi ho tro DELIVERY hoac TAKEAWAY");
         }
         order.setDeliveryMethod(method);
 
-        if (method == DeliveryMethod.DELIVERY) {
-            if (request.getDeliveryAddress() != null && !request.getDeliveryAddress().trim().isEmpty()) {
-                order.setDeliveryAddress(request.getDeliveryAddress());
-            } else {
-                if (customer.getAddress() == null || customer.getAddress().trim().isEmpty()) {
-                    throw new RuntimeException("Vui lòng nhập địa chỉ hoặc cập nhật hồ sơ để giao hàng");
-                }
-                order.setDeliveryAddress(customer.getAddress());
-            }
-        } else {
-            order.setDeliveryAddress("Nhan tai quan");
-        }
+        setDeliveryAddress(order, method, request, customer);
 
         double totalAmount = 0;
         for (OrderRequest.CartItem item : request.getItems()) {
@@ -162,7 +153,14 @@ public class OrderService {
             order.addDetail(detail);
         }
 
-        assignBestBranchAndDeductStock(order, request.getCustomerLat(), request.getCustomerLng());
+        if (method == DeliveryMethod.TAKEAWAY) {
+            if (request.getBranchId() == null) {
+                throw new RuntimeException("Vui long chon chi nhanh nhan don TAKEAWAY");
+            }
+            assignSpecificBranchAndDeductStock(order, request.getBranchId());
+        } else {
+            assignBestBranchAndDeductStock(order, request.getCustomerLat(), request.getCustomerLng());
+        }
 
         order.setTotalPrice(totalAmount);
         double discountAmount = applyCouponIfNeeded(order, customer, request, totalAmount);
@@ -170,6 +168,7 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
         orderRealtimeService.publishOrderCreated(savedOrder);
+        menuAvailabilityRealtimeService.publishChanged(savedOrder.getBranch());
         return savedOrder;
     }
 
@@ -177,25 +176,27 @@ public class OrderService {
     public Order createStaffOrder(String staffUsername, StaffOrderRequest request) {
         validateOrderRequest(request);
 
-        Customer customer = resolveCustomerForStaffOrder(request);
+        DeliveryMethod method = parseDeliveryMethod(request.getDeliveryMethod());
+        Customer customer = method == DeliveryMethod.DELIVERY
+                ? resolveCustomerForStaffOrder(request)
+                : resolveOptionalCustomerForStaffOrder(request);
         Account staffAccount = branchAccessService.getAccount(staffUsername);
         Employee staff = staffAccount.getRole() == RoleName.SUPER_ADMIN
                 ? employeeRepository.findByAccount_Username(staffUsername).orElse(null)
                 : branchAccessService.getEmployee(staffUsername);
         Long visibleBranchId = branchAccessService.resolveVisibleBranchId(staffUsername, request.getBranchId());
-        Branch orderBranch;
-        if (visibleBranchId != null) {
-            orderBranch = branchRepository.findById(visibleBranchId)
-                    .orElseThrow(() -> new RuntimeException("Chi nhanh khong ton tai"));
-            if (!orderBranch.isActive()) {
-                throw new RuntimeException("Chi nhanh dang bi khoa");
-            }
-        } else {
-            orderBranch = null;
+        if (visibleBranchId == null) {
+            throw new RuntimeException("Vui long chon chi nhanh tao don");
+        }
+        Branch orderBranch = branchRepository.findById(visibleBranchId)
+                .orElseThrow(() -> new RuntimeException("Chi nhanh khong ton tai"));
+        if (!orderBranch.isActive()) {
+            throw new RuntimeException("Chi nhanh dang bi khoa");
         }
 
         Order order = new Order();
         order.setCustomer(customer);
+        order.setOrderSource(OrderSource.STAFF_COUNTER);
         order.setOrderTime(LocalDateTime.now());
         order.setStatus(OrderStatus.CONFIRMED);
         if (staff != null) {
@@ -204,28 +205,9 @@ public class OrderService {
         order.setAcceptedAt(LocalDateTime.now());
         order.setNote(request.getNote());
 
-        DeliveryMethod method = DeliveryMethod.DELIVERY;
-        if (request.getDeliveryMethod() != null && !request.getDeliveryMethod().isEmpty()) {
-            try {
-                method = DeliveryMethod.valueOf(request.getDeliveryMethod().toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-                method = DeliveryMethod.DELIVERY;
-            }
-        }
         order.setDeliveryMethod(method);
 
-        if (method == DeliveryMethod.DELIVERY) {
-            if (request.getDeliveryAddress() != null && !request.getDeliveryAddress().trim().isEmpty()) {
-                order.setDeliveryAddress(request.getDeliveryAddress());
-            } else {
-                if (customer.getAddress() == null || customer.getAddress().trim().isEmpty()) {
-                    throw new RuntimeException("Vui long nhap dia chi giao hang");
-                }
-                order.setDeliveryAddress(customer.getAddress());
-            }
-        } else {
-            order.setDeliveryAddress("Nhan tai quan");
-        }
+        setDeliveryAddress(order, method, request, customer);
 
         double totalAmount = 0;
         for (OrderRequest.CartItem item : request.getItems()) {
@@ -265,11 +247,7 @@ public class OrderService {
             order.addDetail(detail);
         }
 
-        if (orderBranch != null) {
-            assignSpecificBranchAndDeductStock(order, orderBranch.getId());
-        } else {
-            assignBestBranchAndDeductStock(order, request.getCustomerLat(), request.getCustomerLng());
-        }
+        assignSpecificBranchAndDeductStock(order, orderBranch.getId());
 
         order.setTotalPrice(totalAmount);
         double discountAmount = applyCouponIfNeeded(order, customer, request, totalAmount);
@@ -277,6 +255,7 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
         orderRealtimeService.publishOrderCreated(savedOrder);
+        menuAvailabilityRealtimeService.publishChanged(savedOrder.getBranch());
         return savedOrder;
     }
 
@@ -293,6 +272,13 @@ public class OrderService {
 
         return customerRepository.findByPhoneNumber(phoneNumber)
                 .orElseGet(() -> createCustomerFromStaffOrder(request, phoneNumber));
+    }
+
+    private Customer resolveOptionalCustomerForStaffOrder(StaffOrderRequest request) {
+        if (request.getCustomerId() == null && trimToNull(request.getCustomerPhoneNumber()) == null) {
+            return null;
+        }
+        return resolveCustomerForStaffOrder(request);
     }
 
     private Customer createCustomerFromStaffOrder(StaffOrderRequest request, String phoneNumber) {
@@ -348,6 +334,37 @@ public class OrderService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private DeliveryMethod parseDeliveryMethod(String value) {
+        String method = trimToNull(value);
+        if (method == null) {
+            return DeliveryMethod.DELIVERY;
+        }
+        try {
+            return DeliveryMethod.valueOf(method.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            throw new RuntimeException("Hinh thuc nhan mon khong hop le");
+        }
+    }
+
+    private void setDeliveryAddress(Order order, DeliveryMethod method, OrderRequest request, Customer customer) {
+        if (method != DeliveryMethod.DELIVERY) {
+            order.setDeliveryAddress(null);
+            return;
+        }
+
+        String requestedAddress = trimToNull(request.getDeliveryAddress());
+        if (requestedAddress != null) {
+            order.setDeliveryAddress(requestedAddress);
+            return;
+        }
+
+        String customerAddress = customer == null ? null : trimToNull(customer.getAddress());
+        if (customerAddress == null) {
+            throw new RuntimeException("Vui long nhap dia chi giao hang");
+        }
+        order.setDeliveryAddress(customerAddress);
     }
 
     public List<Order> getInternalOrders(String username, Long branchId) {
@@ -475,6 +492,7 @@ public class OrderService {
         order.setNote(order.getNote() + " | Da huy: " + reason);
         Order savedOrder = orderRepository.save(order);
         orderRealtimeService.publishOrderCancelled(savedOrder, previousStatus);
+        menuAvailabilityRealtimeService.publishChanged(savedOrder.getBranch());
     }
 
     private void assertCanCancelOrder(String username, Order order) {
@@ -572,6 +590,9 @@ public class OrderService {
         double discountAmount = 0;
         if (request.getCouponCode() == null || request.getCouponCode().trim().isEmpty()) {
             return discountAmount;
+        }
+        if (customer == null) {
+            throw new RuntimeException("Khach vang lai khong the dung ma giam gia");
         }
 
         String code = request.getCouponCode().toUpperCase();

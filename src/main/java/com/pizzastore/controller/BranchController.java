@@ -50,6 +50,12 @@ public class BranchController {
         return ResponseEntity.ok(branchRepository.findAll(Sort.by(Sort.Direction.ASC, "id")));
     }
 
+    @GetMapping("/active")
+    @Operation(summary = "Lay danh sach chi nhanh dang hoat dong cho khach chon don TAKEAWAY")
+    public ResponseEntity<List<Branch>> getActiveBranches() {
+        return ResponseEntity.ok(branchRepository.findActiveBranches());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER')")
     @Operation(summary = "Lay thong tin chi tiet mot chi nhanh")

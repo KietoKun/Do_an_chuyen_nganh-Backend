@@ -7,6 +7,7 @@ import com.pizzastore.enums.OrderStatus;
 import com.pizzastore.repository.*;
 import com.pizzastore.service.BranchAccessService;
 import com.pizzastore.service.DishService;
+import com.pizzastore.service.MenuAvailabilityRealtimeService;
 import com.pizzastore.service.OrderRealtimeService;
 import com.pizzastore.service.OrderService;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ class OrderServiceTest {
     @Mock private EmployeeRepository employeeRepository;
     @Mock private BranchAccessService branchAccessService;
     @Mock private OrderRealtimeService orderRealtimeService;
+    @Mock private MenuAvailabilityRealtimeService menuAvailabilityRealtimeService;
 
     // Khai báo các dependency phụ để InjectMocks không bị văng lỗi (có thể không xài)
     @Mock private CustomerRepository customerRepository;
@@ -236,5 +238,55 @@ class OrderServiceTest {
         verify(inventoryBatchRepository, times(1)).save(batch);
         verify(inventoryBatchConsumptionRepository, times(1)).save(consumption);
         verify(orderRealtimeService, times(1)).publishOrderCancelled(eq(orderToCancel), eq(com.pizzastore.enums.OrderStatus.PENDING));
+    }
+
+    @Test
+    void createStaffOrder_ShouldAllowWalkInDineInAtStaffBranch() {
+        String username = "staff_counter";
+
+        com.pizzastore.dto.StaffOrderRequest request = new com.pizzastore.dto.StaffOrderRequest();
+        request.setDeliveryMethod("DINE_IN");
+        com.pizzastore.dto.OrderRequest.CartItem item = new com.pizzastore.dto.OrderRequest.CartItem();
+        item.setVariantId(10L);
+        item.setQuantity(1);
+        request.setItems(List.of(item));
+
+        Account staffAccount = new Account();
+        staffAccount.setRole(com.pizzastore.enums.RoleName.STAFF);
+        Employee staff = new Employee();
+        staff.setAccount(staffAccount);
+
+        com.pizzastore.entity.Branch branch = new com.pizzastore.entity.Branch();
+        branch.setId(3L);
+        branch.setActive(true);
+
+        com.pizzastore.entity.Category category = new com.pizzastore.entity.Category();
+        category.setName("Pizza");
+        com.pizzastore.entity.Dish dish = new com.pizzastore.entity.Dish();
+        dish.setName("Pizza tai quay");
+        dish.setCategory(category);
+        dish.setAvailable(true);
+        com.pizzastore.entity.DishVariant variant = new com.pizzastore.entity.DishVariant();
+        variant.setId(10L);
+        variant.setPrice(100000.0);
+        variant.setDish(dish);
+
+        when(branchAccessService.getAccount(username)).thenReturn(staffAccount);
+        when(branchAccessService.getEmployee(username)).thenReturn(staff);
+        when(branchAccessService.resolveVisibleBranchId(username, null)).thenReturn(branch.getId());
+        when(branchRepository.findById(branch.getId())).thenReturn(Optional.of(branch));
+        when(branchRepository.findByIdForUpdate(branch.getId())).thenReturn(Optional.of(branch));
+        when(dishVariantRepository.findById(variant.getId())).thenReturn(Optional.of(variant));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Order order = orderService.createStaffOrder(username, request);
+
+        assertNull(order.getCustomer());
+        assertNull(order.getDeliveryAddress());
+        assertEquals(com.pizzastore.enums.DeliveryMethod.DINE_IN, order.getDeliveryMethod());
+        assertEquals(com.pizzastore.enums.OrderSource.STAFF_COUNTER, order.getOrderSource());
+        assertEquals(branch, order.getBranch());
+        assertEquals(OrderStatus.CONFIRMED, order.getStatus());
+        verify(menuAvailabilityRealtimeService).publishChanged(branch);
     }
 }

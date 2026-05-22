@@ -2,5 +2,6 @@ package com.pizzastore.enums;
 
 public enum DeliveryMethod {
     DELIVERY,   // Giao hàng tận nơi
-    TAKEAWAY    // Khách đến quán lấy (Mang về)
+    TAKEAWAY,   // Khách đến quán lấy (Mang về)
+    DINE_IN     // Khách ăn tại quán
 }

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import com.pizzastore.enums.DeliveryMethod;
+import com.pizzastore.enums.OrderSource;
 
 @Entity
 @Table(name = "orders")
@@ -34,6 +35,10 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(name = "delivery_method")
     private DeliveryMethod deliveryMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_source")
+    private OrderSource orderSource;
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
@@ -125,6 +130,9 @@ public class Order {
 
     public DeliveryMethod getDeliveryMethod() { return deliveryMethod; }
     public void setDeliveryMethod(DeliveryMethod deliveryMethod) { this.deliveryMethod = deliveryMethod; }
+
+    public OrderSource getOrderSource() { return orderSource; }
+    public void setOrderSource(OrderSource orderSource) { this.orderSource = orderSource; }
 
     public String getDeliveryAddress() { return deliveryAddress; }
     public void setDeliveryAddress(String address) { this.deliveryAddress = address; }

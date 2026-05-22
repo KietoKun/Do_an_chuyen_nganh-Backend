@@ -31,6 +31,7 @@ class DishServiceTest {
     // Khai báo các mock khác dù không dùng trong hàm này để Spring không báo lỗi Null
     @Mock private BranchRepository branchRepository;
     @Mock private InventoryRepository inventoryRepository;
+    @Mock private InventoryBatchRepository inventoryBatchRepository;
     @Mock private DishVariantRepository dishVariantRepository;
 
     @InjectMocks
@@ -160,5 +161,45 @@ class DishServiceTest {
         assertEquals(1, menu.size()); // Chỉ lấy món đang mở bán
         assertEquals("Pizza Phô Mai", menu.get(0).getName());
         assertEquals("Pizza", menu.get(0).getCategory());
+    }
+
+    @Test
+    void getMenu_ShouldUseSelectedBranchUsableBatchesForMaxOrderableQuantity() {
+        com.pizzastore.entity.Branch branch = new com.pizzastore.entity.Branch();
+        branch.setId(7L);
+        branch.setActive(true);
+
+        com.pizzastore.entity.Product flour = new com.pizzastore.entity.Product();
+        flour.setId(9L);
+
+        Dish dish = new Dish();
+        dish.setId(4L);
+        dish.setName("Pizza batch");
+        dish.setAvailable(true);
+        com.pizzastore.entity.DishVariant variant = new com.pizzastore.entity.DishVariant();
+        variant.setId(5L);
+        variant.setPrice(120000.0);
+        variant.addRecipe(new com.pizzastore.entity.Recipe(variant, flour, 2.0));
+        dish.getVariants().add(variant);
+
+        com.pizzastore.entity.Inventory inventory = new com.pizzastore.entity.Inventory(branch, flour, 10.0);
+        com.pizzastore.entity.InventoryBatch usableBatch = new com.pizzastore.entity.InventoryBatch(
+                branch,
+                flour,
+                4.0,
+                java.time.LocalDate.now().atStartOfDay(),
+                java.time.LocalDate.now().plusDays(1)
+        );
+
+        when(branchRepository.findById(branch.getId())).thenReturn(Optional.of(branch));
+        when(dishRepository.findByIsAvailableTrue()).thenReturn(List.of(dish));
+        when(inventoryRepository.findByBranchAndProduct(branch, flour)).thenReturn(Optional.of(inventory));
+        when(inventoryBatchRepository.findUsableBatchesForDeduction(eq(branch), eq(flour), any()))
+                .thenReturn(List.of(usableBatch));
+
+        var menu = dishService.getMenu(branch.getId());
+
+        assertEquals(2, menu.get(0).getVariants().get(0).getMaxOrderableQuantity());
+        assertTrue(menu.get(0).getVariants().get(0).isAvailable());
     }
 }

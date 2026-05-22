@@ -27,6 +27,9 @@ public class OrderRequest {
     @Schema(description = "Kinh độ của khách hàng (Dùng để tìm chi nhánh)", example = "106.6596")
     private Double customerLng;
 
+    @Schema(description = "ID chi nhánh. Khách dùng cho TAKEAWAY; SUPER_ADMIN dùng khi tạo đơn staff.", example = "1")
+    private Long branchId;
+
     public static class CartItem {
         @Schema(description = "ID của biến thể sản phẩm (Size M/L...)", example = "10")
         private Long variantId;
@@ -69,4 +72,7 @@ public class OrderRequest {
 
     public Double getCustomerLng() { return customerLng; }
     public void setCustomerLng(Double customerLng) { this.customerLng = customerLng; }
+
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
 }

@@ -7,6 +7,7 @@ import com.pizzastore.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ public class DishService {
     private final DishRepository dishRepository;
     private final DishVariantRepository dishVariantRepository;
     private final InventoryRepository inventoryRepository; // ĐÃ THÊM
+    private final InventoryBatchRepository inventoryBatchRepository;
     private final BranchRepository branchRepository;
     private final CategoryRepository categoryRepository; // ĐÃ THÊM
     private final ProductRepository productRepository;
@@ -24,12 +26,14 @@ public class DishService {
     public DishService(DishRepository dishRepository,
                        DishVariantRepository dishVariantRepository,
                        InventoryRepository inventoryRepository,
+                       InventoryBatchRepository inventoryBatchRepository,
                        BranchRepository branchRepository,
                        CategoryRepository categoryRepository,
                        ProductRepository productRepository) {
         this.dishRepository = dishRepository;
         this.dishVariantRepository = dishVariantRepository;
         this.inventoryRepository = inventoryRepository;
+        this.inventoryBatchRepository = inventoryBatchRepository;
         this.branchRepository = branchRepository;
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
@@ -37,6 +41,11 @@ public class DishService {
 
     // NÂNG CẤP: Truyền thêm branchId vào để tính toán số lượng theo chi nhánh
     public List<MenuResponse> getMenu() {
+        return getMenu(null);
+    }
+
+    public List<MenuResponse> getMenu(Long branchId) {
+        Branch branch = branchId == null ? null : getActiveBranch(branchId);
         // Chỉ lấy các món đang được phép kinh doanh (Manager không tắt)
         List<Dish> dishes = dishRepository.findByIsAvailableTrue();
 
@@ -44,7 +53,9 @@ public class DishService {
 
         for (Dish dish : dishes) {
             List<MenuResponse.VariantDto> variantDtos = dish.getVariants().stream().map(v -> {
-                int maxQty = calculateMaxQuantityAcrossBranches(v);
+                int maxQty = branch == null
+                        ? calculateMaxQuantityAcrossBranches(v)
+                        : calculateMaxQuantity(v, branch);
                 return new MenuResponse.VariantDto(v.getId(), v.getSize(), v.getPrice(), maxQty);
             }).collect(Collectors.toList());
 
@@ -69,7 +80,13 @@ public class DishService {
             // Moi kho của chi nhánh này ra
             Inventory inventory = inventoryRepository.findByBranchAndProduct(branch, product).orElse(null);
 
-            double availableStock = (inventory != null) ? inventory.getQuantityAvailable() : 0.0;
+            double inventoryQuantity = (inventory != null) ? inventory.getQuantityAvailable() : 0.0;
+            double usableBatchQuantity = inventoryBatchRepository
+                    .findUsableBatchesForDeduction(branch, product, LocalDate.now())
+                    .stream()
+                    .mapToDouble(InventoryBatch::getQuantityRemaining)
+                    .sum();
+            double availableStock = Math.min(inventoryQuantity, usableBatchQuantity);
             int possible = (int) (availableStock / recipe.getQuantityNeeded());
 
             if (possible < maxCanCook) {
@@ -93,6 +110,15 @@ public class DishService {
             maxQuantity = Math.max(maxQuantity, calculateMaxQuantity(variant, branch));
         }
         return maxQuantity;
+    }
+
+    private Branch getActiveBranch(Long branchId) {
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new RuntimeException("Chi nhanh khong ton tai"));
+        if (!branch.isActive()) {
+            throw new RuntimeException("Chi nhanh dang bi khoa");
+        }
+        return branch;
     }
 
     public List<Recipe> getRecipeByVariantId(Long variantId) {

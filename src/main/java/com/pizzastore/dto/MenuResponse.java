@@ -73,12 +73,16 @@ public class MenuResponse {
         private String size;
         private Double price;
         private int maxQuantity;
+        private int maxOrderableQuantity;
+        private boolean available;
 
         public VariantDto(Long id, String size, Double price, int maxQuantity) {
             this.id = id;
             this.size = size;
             this.price = price;
             this.maxQuantity = maxQuantity;
+            this.maxOrderableQuantity = maxQuantity;
+            this.available = maxQuantity > 0;
         }
 
 
@@ -112,6 +116,22 @@ public class MenuResponse {
 
         public void setMaxQuantity(int maxQuantity) {
             this.maxQuantity = maxQuantity;
+        }
+
+        public int getMaxOrderableQuantity() {
+            return maxOrderableQuantity;
+        }
+
+        public void setMaxOrderableQuantity(int maxOrderableQuantity) {
+            this.maxOrderableQuantity = maxOrderableQuantity;
+        }
+
+        public boolean isAvailable() {
+            return available;
+        }
+
+        public void setAvailable(boolean available) {
+            this.available = available;
         }
     }
 }

@@ -26,8 +26,8 @@ public class DishController {
 
     @GetMapping
     @Operation(summary = "Xem Menu Món ăn", description = "Hiển thị danh sách món đang bán chung cho toàn hệ thống.")
-    public ResponseEntity<List<MenuResponse>> getMenu() {
-        return ResponseEntity.ok(dishService.getMenu());
+    public ResponseEntity<List<MenuResponse>> getMenu(@RequestParam(required = false) Long branchId) {
+        return ResponseEntity.ok(dishService.getMenu(branchId));
     }
 
     @GetMapping("/{id}")

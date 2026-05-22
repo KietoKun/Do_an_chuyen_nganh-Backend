@@ -87,6 +87,12 @@ Vi du:
 /topic/orders/123
 ```
 
+Menu theo branch subscribe:
+
+```text
+/topic/menu-availability/branches/{branchId}
+```
+
 ## 5. Event Name
 
 Trương `event` trong payload hiện có các giá trị:
@@ -181,6 +187,7 @@ Payload mẫu:
   "discountAmount": 20000.0,
   "finalTotalPrice": 239000.0,
   "deliveryMethod": "DELIVERY",
+  "orderSource": "CUSTOMER_APP",
   "deliveryAddress": "123 Nguyen Trai, Q1",
   "note": "It cay",
   "customerId": 5,
@@ -219,6 +226,7 @@ Payload mẫu:
 - `message`: Text phụ trợ, lời nhắn cho cửa hàng
 - `customerId`, `customerName`, `customerUsername`: thong tin customer.
 - `branchId`, `branchName`: chi nhanh xu ly don.
+- `orderSource`: `CUSTOMER_APP` hoac `STAFF_COUNTER`.
 - `handledBy...`: nhan vien dang xu ly hoac da duyet don.
 - `items[]`: snapshot rut gon de FE render nhanh ma khong can goi lai API ngay.
 
@@ -263,6 +271,25 @@ Subscribe:
 
 Chi render cac don cua branch hien tai.
 
+### Branch menu availability
+
+Subscribe:
+
+```text
+/topic/menu-availability/branches/{branchId}
+```
+
+Backend ban event sau khi tao don tru kho, huy don hoan kho hoac nhap kho:
+
+```json
+{
+  "event": "MENU_AVAILABILITY_CHANGED",
+  "branchId": 2
+}
+```
+
+FE nhan event thi goi lai `GET /api/dishes?branchId={branchId}` de lay snapshot menu moi.
+
 ## 10. Khuyen Nghi FE
 
 - Khong dung `message` de lam logic.
@@ -306,6 +333,6 @@ client.activate();
 - Customer subscribe `/user/queue/orders`
 - Staff/kitchen subscribe `/topic/orders/kitchen`
 - Theo branch subscribe `/topic/orders/branches/{branchId}`
+- Menu theo branch subscribe `/topic/menu-availability/branches/{branchId}`
 - Theo chi tiet don subscribe `/topic/orders/{orderId}`
 - Xu ly theo `event` va `status`
-

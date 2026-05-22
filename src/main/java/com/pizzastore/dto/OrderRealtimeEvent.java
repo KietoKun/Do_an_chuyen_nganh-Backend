@@ -2,6 +2,7 @@ package com.pizzastore.dto;
 
 import com.pizzastore.enums.DeliveryMethod;
 import com.pizzastore.enums.OrderRealtimeEventType;
+import com.pizzastore.enums.OrderSource;
 import com.pizzastore.enums.OrderStatus;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ public class OrderRealtimeEvent {
     private Double discountAmount;
     private Double finalTotalPrice;
     private DeliveryMethod deliveryMethod;
+    private OrderSource orderSource;
     private String deliveryAddress;
     private String note;
     private Long customerId;
@@ -205,6 +207,14 @@ public class OrderRealtimeEvent {
 
     public void setDeliveryMethod(DeliveryMethod deliveryMethod) {
         this.deliveryMethod = deliveryMethod;
+    }
+
+    public OrderSource getOrderSource() {
+        return orderSource;
+    }
+
+    public void setOrderSource(OrderSource orderSource) {
+        this.orderSource = orderSource;
     }
 
     public String getDeliveryAddress() {

@@ -77,6 +77,7 @@ public class OrderRealtimeService {
         event.setDiscountAmount(order.getDiscountAmount());
         event.setFinalTotalPrice(order.getFinalTotalPrice());
         event.setDeliveryMethod(order.getDeliveryMethod());
+        event.setOrderSource(order.getOrderSource());
         event.setDeliveryAddress(order.getDeliveryAddress());
         event.setNote(order.getNote());
         event.setMessage(message);

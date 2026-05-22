@@ -10,6 +10,7 @@ import com.pizzastore.repository.InventoryBatchRepository;
 import com.pizzastore.repository.InventoryRepository;
 import com.pizzastore.repository.ProductRepository;
 import com.pizzastore.service.BranchAccessService;
+import com.pizzastore.service.MenuAvailabilityRealtimeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -37,18 +38,21 @@ public class InventoryController {
     private final InventoryBatchRepository inventoryBatchRepository;
     private final BranchRepository branchRepository;
     private final BranchAccessService branchAccessService;
+    private final MenuAvailabilityRealtimeService menuAvailabilityRealtimeService;
 
     @Autowired
     public InventoryController(ProductRepository productRepository,
                                InventoryRepository inventoryRepository,
                                InventoryBatchRepository inventoryBatchRepository,
                                BranchRepository branchRepository,
-                               BranchAccessService branchAccessService) {
+                               BranchAccessService branchAccessService,
+                               MenuAvailabilityRealtimeService menuAvailabilityRealtimeService) {
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
         this.inventoryBatchRepository = inventoryBatchRepository;
         this.branchRepository = branchRepository;
         this.branchAccessService = branchAccessService;
+        this.menuAvailabilityRealtimeService = menuAvailabilityRealtimeService;
     }
 
     @GetMapping("/products")
@@ -205,7 +209,9 @@ public class InventoryController {
         );
 
         inventoryRepository.save(inventory);
-        return ResponseEntity.ok(inventoryBatchRepository.save(batch));
+        InventoryBatch savedBatch = inventoryBatchRepository.save(batch);
+        menuAvailabilityRealtimeService.publishChanged(branch);
+        return ResponseEntity.ok(savedBatch);
     }
     private String currentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();

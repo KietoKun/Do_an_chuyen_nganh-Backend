@@ -72,6 +72,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/error").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/dishes/**", "/api/toppings/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/branches/active").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                                 .requestMatchers("/api/payment/**").permitAll()
