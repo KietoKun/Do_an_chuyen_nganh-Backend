@@ -13,6 +13,8 @@ import java.util.List;
 
 @Repository
 public interface BranchRepository extends JpaRepository<Branch, Long> {
+    boolean existsByNameIgnoreCase(String name);
+
     @Query("SELECT b FROM Branch b WHERE b.isActive = true ORDER BY b.id ASC")
     List<Branch> findActiveBranches();
 
