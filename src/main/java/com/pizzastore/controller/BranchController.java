@@ -132,22 +132,6 @@ public class BranchController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Transactional
-    @Operation(summary = "Xoa mem chi nhanh bang cach khoa trang thai hoat dong")
-    public ResponseEntity<?> deleteBranch(@PathVariable Long id) {
-        try {
-            Branch branch = branchRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy chi nhánh ID: " + id));
-            branch.setActive(false);
-            branchRepository.save(branch);
-            return ResponseEntity.ok("Đã khóa chi nhánh thành công");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi: " + e.getMessage());
-        }
-    }
-
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER')")
     @Operation(summary = "Lay thong tin chi tiet mot chi nhanh")
